@@ -1,0 +1,19 @@
+# Database credentials (DO NOT PUSH)
+db_connect.php
+
+# Environment files
+.env
+
+# Logs
+*.log
+
+# OS files
+Thumbs.db
+.DS_Store
+
+# Node / vendor (future safety)
+node_modules/
+vendor/
+
+
+config.php

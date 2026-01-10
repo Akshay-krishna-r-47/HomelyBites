@@ -1,0 +1,399 @@
+/* Google Fonts */
+/* Google Fonts imported in HTML */
+
+:root {
+    --primary-color: #2C3E50;
+    /* Deep Charcoal */
+    --secondary-color: #D4AF37;
+    /* Gold */
+    --text-color: #333333;
+    --light-bg: #F5F5F5;
+    --white: #FFFFFF;
+    --border-color: #E0E0E0;
+    --shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Lato', sans-serif;
+    scroll-behavior: smooth;
+}
+
+body {
+    background-color: var(--light-bg);
+    color: var(--text-color);
+    line-height: 1.6;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    font-family: 'Playfair Display', serif;
+    font-weight: 700;
+}
+
+/* Header */
+header {
+    background: var(--white);
+    padding: 1.5rem 5%;
+    display: flex;
+    justify-content: flex-end;
+    /* Align nav to the right */
+    align-items: center;
+    border-bottom: none;
+    /* Removed border as per screenshot */
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+}
+
+.logo {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    text-decoration: none;
+    letter-spacing: 0.5px;
+}
+
+nav ul {
+    list-style: none;
+    display: flex;
+    gap: 30px;
+}
+
+nav a {
+    text-decoration: none;
+    color: var(--text-color);
+    font-weight: 400;
+    text-transform: uppercase;
+    font-size: 0.9rem;
+    letter-spacing: 1px;
+    transition: color 0.3s;
+    padding-bottom: 5px;
+    border-bottom: 2px solid transparent;
+}
+
+nav a:hover,
+nav a.active {
+    color: var(--primary-color);
+    border-bottom-color: var(--secondary-color);
+}
+
+/* Landing Splash */
+.landing-splash {
+    height: 80vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background-color: #FFF9F0;
+    background-image: url('../images/bg_pattern.png');
+    background-size: 400px;
+    background-repeat: repeat;
+    /* background-attachment: fixed; Removed as per user request */
+    position: relative;
+}
+
+.logo-container {
+    position: relative;
+    display: inline-block;
+}
+
+.main-title {
+    font-family: 'Lemon', serif;
+    font-size: 7rem;
+    color: #008000;
+    /* Green as per design */
+    margin: 0;
+    line-height: 1;
+    letter-spacing: 2px;
+}
+
+.chef-hat {
+    position: absolute;
+    top: -105px;
+    /* Nudged down and in */
+    right: -105px;
+    /* Nudged left */
+    width: 160px;
+    height: auto;
+    transform: rotate(20deg);
+}
+
+
+.description-text {
+    font-family: 'Lemon', serif;
+    font-size: 1.5rem;
+    color: #D4AF37;
+    /* Gold to match 'Warmth' and compliment Green */
+    margin-top: 10px;
+    letter-spacing: 1px;
+    font-weight: bold;
+}
+
+.cta-container {
+    margin-top: 25px;
+}
+
+.btn-primary {
+    display: inline-block;
+    padding: 12px 35px;
+    background-color: #008000;
+    color: #FFF;
+    font-family: 'Lato', sans-serif;
+    font-weight: 700;
+    text-transform: uppercase;
+    text-decoration: none;
+    border-radius: 30px;
+    font-size: 1rem;
+    letter-spacing: 1px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.btn-primary:hover {
+    background-color: #155d15;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Forms */
+.auth-container {
+    padding: 5rem 5%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 80vh;
+    background-color: #F8F9FA;
+}
+
+.auth-form {
+    background: var(--white);
+    padding: 3rem;
+    border: 1px solid var(--border-color);
+    width: 100%;
+    max-width: 500px;
+    box-shadow: var(--shadow);
+}
+
+.auth-form h2 {
+    text-align: center;
+    margin-bottom: 2.5rem;
+    color: var(--primary-color);
+    font-size: 2rem;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #555;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.form-group input,
+.form-group select {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #CCC;
+    background-color: #FAFAFA;
+    font-size: 1rem;
+    transition: border-color 0.3s;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    background-color: var(--white);
+}
+
+.error-msg {
+    color: #D32F2F;
+    font-size: 0.9rem;
+    margin-top: 5px;
+    display: none;
+    background: #FFEBEE;
+    padding: 10px;
+    border-left: 3px solid #D32F2F;
+}
+
+/* Features Section */
+.features-section {
+    padding: 4rem 5%;
+    text-align: center;
+    background-color: #FFF9F0;
+    background-image: url('../images/bg_pattern.png');
+    background-size: 400px;
+    background-repeat: repeat;
+    /* background-attachment: fixed; Removed as per user request */
+    position: relative;
+}
+
+.features-header h2 {
+    font-family: 'Lemon', serif;
+    font-size: 4.5rem;
+    /* Significantly increased */
+    color: #008000;
+    margin-bottom: 0.5rem;
+}
+
+.features-header p {
+    color: #666;
+    margin-bottom: 3rem;
+    font-size: 1.8rem;
+    /* Increased size */
+    font-family: 'Lemon', serif;
+}
+
+.features-subtitle {
+    font-family: 'Lemon', serif;
+    font-size: 1.6rem;
+    color: #666;
+    margin: 0.5rem 0 2.5rem;
+}
+
+.features-grid {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    flex-wrap: wrap;
+}
+
+.feature-card {
+    background-color: #FFFCF5;
+    /* Lighter Cream */
+    border-radius: 30px;
+    border: 12px solid #FFFFFF;
+    padding: 1.5rem;
+    /* Reduced padding */
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+    width: 320px;
+    text-align: center;
+    transition: transform 0.3s ease;
+}
+
+.feature-card:hover {
+    transform: translateY(-5px);
+}
+
+.icon-container {
+    margin-bottom: 1rem;
+    /* Reduced margin */
+    height: 200px;
+    /* Reduced height */
+    /* Fixed height for alignment */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.icon-container img {
+    width: 100%;
+    /* Force full width */
+    max-width: 100%;
+    max-height: 220px;
+    height: auto;
+    object-fit: contain;
+    transform: scale(1.6);
+    /* Zoom in to overcome internal padding */
+    transition: transform 0.3s ease;
+}
+
+/* Specific icon adjustment if using FontAwesome */
+.feature-card h3 {
+    font-family: 'Lato', sans-serif;
+    font-size: 1.5rem;
+    /* Increased from 1.1rem */
+    font-weight: 700;
+    margin-bottom: 0.8rem;
+    color: #333;
+}
+
+.feature-card p {
+    font-size: 1.2rem;
+    /* Increased from 0.9rem */
+    color: #777;
+    line-height: 1.5;
+}
+
+/* Footer */
+footer {
+    background-color: #FFFFFF;
+    /* White background */
+    color: #333;
+    /* Dark text */
+    text-align: center;
+    padding: 3rem 0;
+    margin-top: auto;
+    border-top: 1px solid #E0E0E0;
+}
+
+footer p {
+    font-size: 0.9rem;
+    font-weight: 300;
+    letter-spacing: 0.5px;
+}
+
+/* Utility for text links */
+a {
+    color: var(--primary-color);
+}
+
+/* Split Screen Login */
+.split-screen {
+    display: flex;
+    height: 100vh;
+    width: 100%;
+    overflow: hidden;
+}
+
+.split-left {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background: var(--white);
+    position: relative;
+    z-index: 2;
+}
+
+.split-right {
+    flex: 1;
+    background: url('https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?ixlib=rb-1.2.1&auto=format&fit=crop&w=1920&q=80') center center / cover no-repeat;
+    position: relative;
+}
+
+.split-right::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.2);
+}
+
+@media (max-width: 768px) {
+    .split-right {
+        display: none;
+    }
+
+    .split-left {
+        flex: 1;
+        width: 100%;
+    }
+}
