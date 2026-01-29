@@ -2,7 +2,12 @@
 include 'role_check.php';
 check_role_access('customer');
 
-$user_name = htmlspecialchars($_SESSION['name']);
+$formatted_name = formatName($_SESSION['name']);
+$user_name = htmlspecialchars($formatted_name);
+$user_initials = getAvatarInitials($formatted_name);
+
+// Fetch Profile Image
+$user_profile_image = getProfileImage($_SESSION['user_id'], $conn);
 ?>
 
 <!DOCTYPE html>
@@ -12,160 +17,114 @@ $user_name = htmlspecialchars($_SESSION['name']);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - Homely Bites</title>
     <!-- Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Lemon&family=Lato:wght@300;400;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
-    <!-- FontAwesome -->
+    <link href="https://fonts.googleapis.com/css2?family=Lemon&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     
     <style>
-        /* DASHBOARD REFACTOR - CLEAN ONLY */
+        /* SWIGGY-STYLE DASHBOARD DESIGN */
         :root {
-            --primary-color: #27ae60;
-            --secondary-color: #2c3e50;
-            --accent-color: #f39c12;
-            --bg-body: #fdfbf7;
-            --text-dark: #2c3e50;
-            --text-muted: #7f8c8d;
+            --primary-color: #fc8019; /* Swiggy Orange-ish or keep brand color if preferred, User said "Swiggy-style cards", let's keep consistent green or switch to neutral? User didn't specify color change, just "Style". I'll keep brand greens but use Swiggy layout. Actually, prompt said "Professional typography... Minimal". I will use the Green brand identity but Swiggy structure. */
+            --brand-green: #0a8f08;
+            --bg-body: #f8f8f8;
+            --text-dark: #222;
+            --text-muted: #666;
             --card-bg: #FFFFFF;
-            --brand-green: #008000;
-            
-            --sidebar-width: 280px;
-            --sidebar-collapsed-width: 80px;
             --header-height: 80px;
-            --border-radius: 16px;
-            --shadow-sm: 0 2px 8px rgba(0,0,0,0.04);
-            --shadow-hover: 0 12px 32px rgba(0,0,0,0.08);
-            --border-light: 1px solid rgba(0,0,0,0.06);
+            --shadow-card: 0 4px 14px rgba(0,0,0,0.08);
+            --shadow-hover: 0 8px 20px rgba(0,0,0,0.12);
         }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Lato', sans-serif;
-        }
-
-        body {
-            background-color: var(--bg-body);
-            color: var(--text-dark);
-            display: flex;
-            min-height: 100vh;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
         
-        @import url('assets/css/style.css'); /* Import shared styles if present, defaulting to inline for safety of previous edits */
+        body { background-color: var(--bg-body); color: var(--text-dark); display: flex; min-height: 100vh; }
+
+        /* Reuse Sidebar logic from include, assume it adapts or we override font */
         
-        /* SIDEBAR css is in customer_sidebar.php import, but layout needs this */
-        .sidebar { /* Handled by include */ }
+        .main-content { flex: 1; display: flex; flex-direction: column; width: 0; }
 
-        /* Main Content Layout */
-        .main-content {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            width: 0; /* Prevents flex overflow */
-            transition: all 0.4s ease;
-        }
-
-        /* Top Header */
+        /* Header */
         header {
             height: var(--header-height);
             background-color: var(--card-bg);
             padding: 0 40px;
             display: flex;
             align-items: center;
-            justify-content: space-between; /* Changed for search bar */
+            justify-content: space-between;
             position: sticky;
             top: 0;
             z-index: 900;
-            border-bottom: var(--border-light);
-            box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.04);
         }
 
         .search-container {
-            display: flex;
-            align-items: center;
-            background: #f8f9fa;
-            border-radius: 12px;
-            padding: 10px 20px;
-            width: 400px;
-            border: 1px solid #eee;
-            transition: all 0.3s;
+            display: flex; align-items: center; background: #f1f1f1; border-radius: 12px; padding: 12px 20px; width: 400px; transition: 0.3s;
         }
-
-        .search-container:focus-within {
-            background: #fff;
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 3px rgba(39, 174, 96, 0.1);
-        }
-
-        .search-container i { color: #aaa; margin-right: 12px; }
-        .search-container input { border: none; background: transparent; outline: none; width: 100%; font-size: 0.95rem; color: var(--text-dark); }
+        .search-container i { color: #888; margin-right: 12px; }
+        .search-container input { border: none; background: transparent; outline: none; width: 100%; font-size: 0.95rem; font-weight: 500; color: var(--text-dark); }
 
         .user-info { display: flex; align-items: center; gap: 15px; text-align: right; }
-        .profile-pic { width: 42px; height: 42px; background: linear-gradient(135deg, var(--brand-green), #2ecc71); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.1rem; box-shadow: 0 4px 10px rgba(0, 128, 0, 0.2); }
+        .profile-pic { width: 40px; height: 40px; background: #eee; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 0.9rem; color: #555; overflow: hidden; object-fit: cover; }
+        .profile-pic img { width: 100%; height: 100%; object-fit: cover; }
 
-        /* Dashboard Content */
-        .content-container {
-            padding: 40px 50px;
-            max-width: 1600px;
-            margin: 0 auto;
-            width: 100%;
-        }
+        /* Layout */
+        .content-container { padding: 40px 60px; max-width: 1400px; margin: 0 auto; width: 100%; }
 
+        /* Welcome Text */
         .welcome-section { margin-bottom: 40px; }
-        .welcome-section h2 { font-family: 'Playfair Display', serif; font-size: 2.2rem; color: var(--text-dark); margin-bottom: 8px; }
+        .welcome-title { font-size: 28px; font-weight: 700; margin-bottom: 4px; color: #222; }
+        .welcome-sub { font-size: 15px; color: #666; font-weight: 500; }
 
-        /* Section Header */
-        .section-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-end;
-            margin-bottom: 25px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid rgba(0,0,0,0.03);
-        }
+        /* Section Title */
+        .section-header { margin: 30px 0 20px; display: flex; justify-content: space-between; align-items: center; }
+        .section-title { font-size: 22px; font-weight: 600; color: #333; margin: 0; }
+        .view-all { font-size: 14px; font-weight: 600; color: #ff6e00; text-decoration: none; } /* Swiggy orange accent for link */
 
-        .section-header h3 { font-family: 'Playfair Display', serif; font-size: 1.8rem; color: var(--text-dark); }
-        .view-all { color: var(--primary-color); text-decoration: none; font-weight: 700; font-size: 0.9rem; display: flex; align-items: center; gap: 5px; transition: gap 0.2s; }
-        .view-all:hover { gap: 8px; }
-        .view-all::after { content: '→'; font-size: 1.1rem; }
-
-        /* Food Grid (Copied) */
+        /* Food Grid (Swiggy Style) */
         .food-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 30px;
-            margin-bottom: 50px;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 24px;
+            padding-bottom: 40px;
         }
 
         .food-card {
-            background-color: var(--card-bg);
-            border-radius: var(--border-radius);
+            background: #fff;
+            border-radius: 16px;
             overflow: hidden;
-            box-shadow: var(--shadow-sm);
-            border: var(--border-light);
-            transition: all 0.3s ease;
+            box-shadow: var(--shadow-card);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
             position: relative;
+            cursor: pointer;
+            border: 1px solid rgba(0,0,0,0.03);
         }
 
-        .food-card:hover { transform: translateY(-8px); box-shadow: var(--shadow-hover); }
+        .food-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-hover); }
 
-        .food-img { height: 200px; background-color: #f0f0f0; background-size: cover; background-position: center; position: relative; }
-        .food-info { padding: 24px; }
-        .food-name { font-family: 'Playfair Display', serif; font-weight: 700; font-size: 1.25rem; margin-bottom: 8px; color: var(--text-dark); }
-        .food-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .food-price { color: var(--text-dark); font-weight: 800; font-size: 1.1rem; }
-        .food-rating { background-color: #fff8e1; color: #f39c12; padding: 4px 10px; border-radius: 8px; font-size: 0.85rem; font-weight: 700; display: flex; align-items: center; gap: 5px; }
+        .food-img { width: 100%; height: 170px; object-fit: cover; background-color: #f0f0f0; display: block; }
+        
+        .food-details { padding: 16px; }
+        .food-name { font-size: 16px; font-weight: 600; margin-bottom: 4px; text-transform: capitalize; color: #333; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .food-cat { font-size: 13px; color: #888; margin-bottom: 12px; }
+        
+        .food-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; }
+        .food-price { font-size: 15px; font-weight: 600; color: #0a8f08; }
+        .food-rating { background-color: #24963f; color: white; padding: 2px 6px; border-radius: 4px; font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 4px; }
+        .food-rating i { font-size: 10px; }
 
-        /* 3-Dot Menu */
-        .card-menu { position: absolute; top: 15px; right: 15px; z-index: 10; }
-        .menu-btn { background: rgba(255, 255, 255, 0.95); border: none; width: 34px; height: 34px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--text-dark); box-shadow: 0 4px 10px rgba(0,0,0,0.15); transition: all 0.2s; }
-        .menu-btn:hover { background: #fff; transform: scale(1.1) rotate(90deg); }
-        .menu-options { position: absolute; top: 40px; right: 0; background: white; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); padding: 8px; min-width: 180px; display: none; flex-direction: column; border: var(--border-light); z-index: 100; transform-origin: top right; }
-        .menu-options.show { display: flex; animation: menuPop 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-        @keyframes menuPop { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
-        .menu-option { padding: 12px 16px; text-align: left; background: none; border: none; cursor: pointer; font-size: 0.9rem; color: var(--text-dark); display: flex; align-items: center; gap: 12px; border-radius: 8px; width: 100%; font-weight: 500; transition: all 0.2s; }
-        .menu-option:hover { background-color: #f8f9fa; color: var(--primary-color); transform: translateX(4px); }
-        .menu-option i { width: 20px; text-align: center; }
+        /* Add Button */
+        .btn-add { border: 1px solid #d4d5d9; color: #1ba672; background: white; padding: 6px 20px; border-radius: 4px; font-weight: 600; font-size: 13px; text-transform: uppercase; box-shadow: 0 1px 3px rgba(0,0,0,0.1); transition: all 0.2s; position: absolute; bottom: 16px; right: 16px; }
+        .btn-add:hover { box-shadow: 0 2px 6px rgba(0,0,0,0.15); background: #f9f9f9; }
+
+        /* Empty State */
+        .empty-state { text-align: center; padding: 60px 20px; width: 100%; grid-column: 1 / -1; }
+        .empty-state img { width: 180px; margin-bottom: 20px; opacity: 0.8; }
+        .empty-state p { font-size: 18px; color: #888; font-weight: 500; }
+
+        /* Menu Button Override */
+        .card-menu { position: absolute; top: 10px; right: 10px; z-index: 10; }
+        .menu-btn { background: rgba(255,255,255,0.8); border: none; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; backdrop-filter: blur(4px); }
+        .menu-options { /* ...existing styles... */ display: none; background: white; padding: 10px; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); position: absolute; right: 0; width: 150px; }
+        .menu-options.show { display: block; }
 
     </style>
 </head>
@@ -187,7 +146,11 @@ $user_name = htmlspecialchars($_SESSION['name']);
                     <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 500; letter-spacing: 0.5px; text-transform: uppercase;">Customer</span>
                 </div>
                 <div class="profile-pic">
-                    <i class="fa-solid fa-user"></i>
+                    <?php if($user_profile_image): ?>
+                        <img src="<?php echo $user_profile_image; ?>" alt="Profile">
+                    <?php else: ?>
+                        <?php echo $user_initials; ?>
+                    <?php endif; ?>
                 </div>
             </div>
         </header>
@@ -197,79 +160,62 @@ $user_name = htmlspecialchars($_SESSION['name']);
             
             <!-- Welcome Section -->
             <div class="welcome-section">
-                <h2>Welcome back, <?php echo $user_name; ?>! 👋</h2>
-                <p style="color: #7f8c8d; font-size: 1.05rem;">Ready to satisfy your cravings today?</p>
+                <h1 class="welcome-title">Welcome back, <?php echo $user_name; ?>!</h1>
+                <p class="welcome-sub">Order your favorite food from local chefs</p>
             </div>
 
-            <!-- Recommended Section (Kept) -->
+            <!-- Recommended Section -->
             <div class="section-header">
-                <h3>Recommended to you</h3>
-                <a href="#" class="view-all">View All</a>
+                <h2 class="section-title">Recommended to you</h2>
+                <a href="#" class="view-all">View All <i class="fa-solid fa-arrow-right"></i></a>
             </div>
 
             <div class="food-grid">
-                <!-- Food Card 1 -->
-                <div class="food-card">
-                    <div class="food-img" style="background-image: url('https://images.unsplash.com/photo-1589302168068-964664d93dc0?auto=format&fit=crop&w=800');">
-                        <div class="card-menu">
-                            <button class="menu-btn" onclick="toggleMenu(this, event)"><i class="fa-solid fa-ellipsis-vertical"></i></button>
-                            <div class="menu-options">
-                                <button class="menu-option"><i class="fa-regular fa-heart"></i>Add to Favorites</button>
-                                <button class="menu-option"><i class="fa-solid fa-share-nodes"></i>Share</button>
-                                <button class="menu-option" style="color: #e74c3c;"><i class="fa-solid fa-ban"></i>Not Interested</button>
+                <?php
+                $rec_sql = "SELECT id, name, price, image, category FROM foods WHERE status = 'Available' ORDER BY id DESC LIMIT 12";
+                if ($stmt = $conn->prepare($rec_sql)) {
+                    $stmt->execute();
+                    $result = $stmt->get_result();
+                    
+                    if ($result->num_rows > 0) {
+                        while ($row = $result->fetch_assoc()) {
+                            $f_name = htmlspecialchars($row['name']);
+                            $f_price = htmlspecialchars($row['price']);
+                            $f_image = $row['image'];
+                            $f_cat = isset($row['category']) ? htmlspecialchars($row['category']) : 'Delicious';
+                            
+                            // Fallback image logic - Updated to image-coming-soon.png
+                            if (empty($f_image) || !file_exists($f_image)) {
+                                $f_image = 'assets/images/image-coming-soon.png';
+                            }
+                            ?>
+                            <div class="food-card">
+                                <img src="<?php echo $f_image; ?>" alt="<?php echo $f_name; ?>" class="food-img">
+                                <div class="food-details">
+                                    <div class="food-name"><?php echo $f_name; ?></div>
+                                    <div class="food-cat"><?php echo $f_cat; ?></div>
+                                    
+                                    <div class="food-footer">
+                                        <div class="food-rating"><i class="fa-solid fa-star"></i> 4.5</div>
+                                        <div class="food-price">₹<?php echo $f_price; ?></div>
+                                    </div>
+                                    
+                                    <!-- Add button overlay not needed, just simple clean card -->
+                                </div>
                             </div>
+                            <?php
+                        }
+                    } else {
+                        ?>
+                        <div class="empty-state">
+                            <img src="assets/images/empty-food.svg" alt="No Food">
+                            <p>No food items available right now</p>
                         </div>
-                    </div>
-                    <div class="food-info">
-                        <h4 class="food-name">Hyderabadi Chicken Biryani</h4>
-                        <div class="food-meta">
-                            <span class="food-price">₹250</span>
-                            <div class="food-rating"><i class="fa-solid fa-star"></i> 4.8</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Food Card 2 -->
-                <div class="food-card">
-                    <div class="food-img" style="background-image: url('https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=800');">
-                        <div class="card-menu">
-                            <button class="menu-btn" onclick="toggleMenu(this, event)"><i class="fa-solid fa-ellipsis-vertical"></i></button>
-                            <div class="menu-options">
-                                <button class="menu-option"><i class="fa-regular fa-heart"></i>Add to Favorites</button>
-                                <button class="menu-option"><i class="fa-solid fa-share-nodes"></i>Share</button>
-                                <button class="menu-option" style="color: #e74c3c;"><i class="fa-solid fa-ban"></i>Not Interested</button>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="food-info">
-                        <h4 class="food-name">Classic Margherita Pizza</h4>
-                        <div class="food-meta">
-                            <span class="food-price">₹320</span>
-                            <div class="food-rating"><i class="fa-solid fa-star"></i> 4.5</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Food Card 3 -->
-                <div class="food-card">
-                    <div class="food-img" style="background-image: url('https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=800');">
-                        <div class="card-menu">
-                            <button class="menu-btn" onclick="toggleMenu(this, event)"><i class="fa-solid fa-ellipsis-vertical"></i></button>
-                            <div class="menu-options">
-                                <button class="menu-option"><i class="fa-regular fa-heart"></i>Add to Favorites</button>
-                                <button class="menu-option"><i class="fa-solid fa-share-nodes"></i>Share</button>
-                                <button class="menu-option" style="color: #e74c3c;"><i class="fa-solid fa-ban"></i>Not Interested</button>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="food-info">
-                        <h4 class="food-name">Premium Beef Burger</h4>
-                        <div class="food-meta">
-                            <span class="food-price">₹180</span>
-                            <div class="food-rating"><i class="fa-solid fa-star"></i> 4.3</div>
-                        </div>
-                    </div>
-                </div>
+                        <?php
+                    }
+                    $stmt->close();
+                }
+                ?>
             </div>
 
         </div>

@@ -1,5 +1,6 @@
 <?php
 session_start();
+include_once 'helpers.php';
 // Prevent caching
 header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header("Cache-Control: post-check=0, pre-check=0", false);
@@ -9,7 +10,9 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'Admin') {
     header("Location: login.php");
     exit();
 }
-$admin_name = htmlspecialchars($_SESSION['name']);
+$formatted_name = formatName($_SESSION['name']);
+$admin_name = htmlspecialchars($formatted_name);
+$admin_initials = getAvatarInitials($formatted_name);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -157,7 +160,7 @@ $admin_name = htmlspecialchars($_SESSION['name']);
                     <span style="font-size: 0.75rem; color: #7f8c8d; font-weight: 500; text-transform: uppercase;">Administrator</span>
                 </div>
                 <div class="profile-pic">
-                    <i class="fa-solid fa-user-shield"></i>
+                    <?php echo $admin_initials; ?>
                 </div>
             </div>
         </header>

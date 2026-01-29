@@ -1,5 +1,6 @@
 <?php
 session_start();
+include_once 'helpers.php';
 header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header("Cache-Control: post-check=0, pre-check=0", false);
 header("Pragma: no-cache");
@@ -9,7 +10,9 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'Delivery') {
     header("Location: login.php");
     exit();
 }
-$user_name = htmlspecialchars($_SESSION['name']);
+$formatted_name = formatName($_SESSION['name']);
+$user_name = htmlspecialchars($formatted_name);
+$user_initials = getAvatarInitials($formatted_name);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -40,13 +43,16 @@ $user_name = htmlspecialchars($_SESSION['name']);
         .card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.05); }
         .card-icon { font-size: 3rem; color: var(--primary-color); margin-bottom: 20px; }
         .card h3 { font-size: 1.2rem; margin-bottom: 10px; }
+        .card h3 { font-size: 1.2rem; margin-bottom: 10px; }
         .card p { color: var(--text-muted); font-size: 0.9rem; }
+        .profile-pic { width: 36px; height: 36px; background: linear-gradient(135deg, var(--brand-green), #27ae60); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 0.9rem; font-weight: bold; }
     </style>
 </head>
 <body>
     <header>
         <a href="#" class="logo">Homely Bites</a>
         <div class="nav-user">
+            <div class="profile-pic"><?php echo $user_initials; ?></div>
             <span>Welcome, <strong><?php echo $user_name; ?></strong></span>
             <a href="logout.php" class="logout-btn">Logout</a>
         </div>

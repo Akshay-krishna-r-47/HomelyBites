@@ -9,9 +9,13 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'Customer') {
     exit();
 }
 include 'db_connect.php';
+include_once 'helpers.php';
 
 $user_id = $_SESSION['user_id'];
-$user_name = htmlspecialchars($_SESSION['name']);
+$formatted_name = formatName($_SESSION['name']);
+$user_name = htmlspecialchars($formatted_name);
+$user_initials = getAvatarInitials($formatted_name);
+$user_profile_image = getProfileImage($user_id, $conn);
 
 // Fetch Recent Orders (excluding Scheduled)
 $recent_orders = [];
@@ -43,50 +47,65 @@ $stmt->close();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Orders - Homely Bites</title>
-    <link href="https://fonts.googleapis.com/css2?family=Lemon&family=Lato:wght@300;400;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Lemon&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        :root { --primary-color: #27ae60; --brand-green: #008000; --bg-body: #fdfbf7; --card-bg: #FFFFFF; --text-dark: #2c3e50; --text-muted: #7f8c8d; --sidebar-width: 280px; --sidebar-collapsed-width: 80px; --header-height: 80px; --border-radius: 16px; --border-light: 1px solid rgba(0,0,0,0.06); --shadow-sm: 0 2px 8px rgba(0,0,0,0.04); }
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Lato', sans-serif; }
+        /* SWIGGY-STYLE DESIGN SYSTEM */
+        :root {
+            --primary-color: #fc8019;
+            --brand-green: #0a8f08;
+            --bg-body: #f8f8f8;
+            --text-dark: #222;
+            --text-muted: #666;
+            --card-bg: #FFFFFF;
+            --header-height: 80px;
+            --shadow-card: 0 4px 14px rgba(0,0,0,0.08);
+            --shadow-hover: 0 8px 20px rgba(0,0,0,0.12);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
         body { background-color: var(--bg-body); color: var(--text-dark); display: flex; min-height: 100vh; }
-        @import url('assets/css/style.css');
-        /* Essential Sidebar/Layout Styles */
-        .sidebar { width: var(--sidebar-width); background-color: var(--brand-green); color: #fff; position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; padding: 20px; z-index: 1000; flex-shrink: 0; transition: all 0.4s; overflow: hidden; white-space: nowrap; }
-        .sidebar.collapsed { width: var(--sidebar-collapsed-width); padding: 20px 10px; }
-        /* ... existing sidebar styles ... */
         
-        .main-content { flex: 1; display: flex; flex-direction: column; width: 0; transition: all 0.4s; }
-        header { height: var(--header-height); background-color: var(--card-bg); padding: 0 40px; display: flex; align-items: center; justify-content: flex-end; position: sticky; top: 0; z-index: 900; border-bottom: 1px solid rgba(0,0,0,0.06); }
-        .content-container { padding: 40px 50px; width: 100%; max-width: 1600px; margin: 0 auto; }
+        /* Layout */
+        .main-content { flex: 1; display: flex; flex-direction: column; width: 0; }
         
-        .page-header h2 { font-family: 'Playfair Display', serif; font-size: 2rem; margin-bottom: 20px; }
-        
-        /* Dashboard Rows Copied & Adapted */
-        .dashboard-row {
-            display: grid;
-            grid-template-columns: 2fr 1fr;
-            gap: 30px;
-            align-items: start;
-        }
-
-        .dashboard-box {
+        /* Header */
+        header {
+            height: var(--header-height);
             background-color: var(--card-bg);
-            padding: 30px;
-            border-radius: var(--border-radius);
-            box-shadow: var(--shadow-sm);
-            border: var(--border-light);
-            height: 100%;
+            padding: 0 40px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 900;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.04);
         }
 
-        .box-title {
-            font-family: 'Playfair Display', serif;
-            font-size: 1.4rem;
-            margin-bottom: 25px;
-            color: var(--text-dark);
+        .search-container {
+            display: flex; align-items: center; background: #f1f1f1; border-radius: 12px; padding: 12px 20px; width: 400px; transition: 0.3s;
         }
+        .search-container i { color: #888; margin-right: 12px; }
+        .search-container input { border: none; background: transparent; outline: none; width: 100%; font-size: 0.95rem; font-weight: 500; color: var(--text-dark); }
+
+        .user-info { display: flex; align-items: center; gap: 15px; text-align: right; }
+        .profile-pic { width: 40px; height: 40px; background: #eee; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 0.9rem; color: #555; overflow: hidden; object-fit: cover; }
+        .profile-pic img { width: 100%; height: 100%; object-fit: cover; }
+
+        .content-container { padding: 40px 60px; max-width: 1400px; margin: 0 auto; width: 100%; }
+        
+        .page-header h2 { font-size: 28px; font-weight: 700; margin-bottom: 30px; color: #222; }
+        
+        /* Dashboard Rows */
+        .dashboard-row { display: grid; grid-template-columns: 2fr 1fr; gap: 30px; align-items: start; }
+        .dashboard-box { background-color: var(--card-bg); padding: 30px; border-radius: 16px; box-shadow: var(--shadow-card); border: 1px solid rgba(0,0,0,0.03); }
+        .box-title { font-size: 20px; font-weight: 700; margin-bottom: 25px; color: var(--text-dark); }
 
         table { width: 100%; border-collapse: separate; border-spacing: 0; }
-        th { text-align: left; padding: 15px; color: var(--text-muted); font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid #f0f0f0; }
+        th { text-align: left; padding: 15px; color: var(--text-muted); font-weight: 600; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid #f0f0f0; }
         td { padding: 20px 15px; font-size: 0.95rem; border-bottom: 1px solid #f5f5f5; color: var(--text-dark); vertical-align: middle; }
         tr:last-child td { border-bottom: none; }
         tr:hover td { background-color: #fafafa; }
@@ -100,24 +119,36 @@ $stmt->close();
         .delivery-item { display: flex; align-items: center; gap: 18px; padding: 15px 0; border-bottom: 1px solid #f5f5f5; }
         .delivery-item:last-child { border-bottom: none; }
         .delivery-icon { width: 48px; height: 48px; border-radius: 12px; background-color: #f8f9fa; border: 1px solid #eee; display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 1.1rem; }
-        .delivery-details h4 { font-size: 1rem; margin-bottom: 4px; color: var(--text-dark); font-weight: 700; }
-        .delivery-details p { font-size: 0.85rem; color: var(--text-muted); }
+        .delivery-details h4 { font-size: 15px; margin-bottom: 4px; color: var(--text-dark); font-weight: 700; }
+        .delivery-details p { font-size: 13px; color: var(--text-muted); }
 
         .empty-state { text-align: center; padding: 20px; color: #999; font-style: italic; }
         
         @media (max-width: 1024px) { .dashboard-row { grid-template-columns: 1fr; } }
+        @media (max-width: 768px) { header { padding: 0 20px; } .content-container { padding: 20px; } }
     </style>
 </head>
 <body>
     <?php include 'customer_sidebar.php'; ?>
     <div class="main-content">
         <header>
-            <div style="text-align: right; margin-right: 15px;">
-                <p style="font-weight: 700;"><?php echo $user_name; ?></p>
-                <span style="font-size: 0.8rem; color: #888;">Customer</span>
+            <div class="search-container">
+                <i class="fa-solid fa-search"></i>
+                <input type="text" placeholder="Search for orders...">
             </div>
-            <div style="width: 40px; height: 40px; background: #ddd; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                <i class="fa-solid fa-user"></i>
+
+            <div class="user-info">
+                <div>
+                    <p style="font-weight: 700; font-size: 0.95rem; margin-bottom: 2px; color: var(--text-dark);"><?php echo $user_name; ?></p>
+                    <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 500; letter-spacing: 0.5px; text-transform: uppercase;">Customer</span>
+                </div>
+                <div class="profile-pic">
+                    <?php if($user_profile_image): ?>
+                        <img src="<?php echo $user_profile_image; ?>" alt="Profile">
+                    <?php else: ?>
+                        <?php echo $user_initials; ?>
+                    <?php endif; ?>
+                </div>
             </div>
         </header>
         <div class="content-container">

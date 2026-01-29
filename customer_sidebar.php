@@ -143,6 +143,8 @@ if (isset($_SESSION['user_id']) && isset($conn)) {
         transition: all 0.3s;
         font-weight: 500;
         font-size: 0.95rem;
+        white-space: normal;
+        line-height: 1.2;
     }
 
     .nav-links a i {

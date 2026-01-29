@@ -1,5 +1,6 @@
 <?php
 // role_check.php: Centralized session and role validation logic
+include_once 'helpers.php';
 
 /**
  * Validates the user's role and redirects if invalid.
