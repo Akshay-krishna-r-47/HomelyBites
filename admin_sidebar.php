@@ -217,6 +217,11 @@ $pending_delivery_count = ($del_req_result && $row = $del_req_result->fetch_asso
                 <?php endif; ?>
             </a>
         </li>
+        <li>
+            <a href="notifications.php?view=admin" class="<?php echo ($current_page == 'notifications.php') ? 'active' : ''; ?>">
+                <i class="fa-solid fa-bell"></i> <span>Notifications</span>
+            </a>
+        </li>
     </ul>
     <div class="logout-link">
         <a href="#" onclick="location.replace('logout.php'); return false;">

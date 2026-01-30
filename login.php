@@ -10,25 +10,18 @@ header("Pragma: no-cache");
 
 // Redirect if already logged in
 if (isset($_SESSION['user_id']) && isset($_SESSION['role'])) {
+    $redirect = "customer_dashboard.php";
+    if ($_SESSION['role'] === 'Admin') {
+        $redirect = "admin_dashboard.php";
+    }
+
     if (isset($_POST['ajax']) && $_POST['ajax'] === '1') {
         ob_end_clean();
-        $redirect = "index.php";
-        switch ($_SESSION['role']) {
-            case 'Customer': $redirect = "customer_dashboard.php"; break;
-            case 'Seller': $redirect = "seller_dashboard.php"; break;
-            case 'Delivery': $redirect = "delivery_dashboard.php"; break;
-            case 'Admin': $redirect = "admin_dashboard.php"; break;
-        }
         echo json_encode(['status' => 'success', 'redirect' => $redirect]);
         exit();
     } else {
-        switch ($_SESSION['role']) {
-            case 'Customer': header("Location: customer_dashboard.php"); exit();
-            case 'Seller': header("Location: seller_dashboard.php"); exit();
-            case 'Delivery': header("Location: delivery_dashboard.php"); exit();
-            case 'Admin': header("Location: admin_dashboard.php"); exit();
-            default: header("Location: index.php"); exit();
-        }
+        header("Location: " . $redirect);
+        exit();
     }
 }
 
@@ -72,16 +65,24 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             if (password_verify($password, $row['password'])) {
                 $_SESSION['user_id'] = $row['user_id'];
                 $_SESSION['name'] = $row['name'];
-                $_SESSION['role'] = $row['role'];
+                $_SESSION['role'] = $row['role']; 
                 $_SESSION['email'] = $row['email'];
+                
+                // Fetch approval status
+                $status_sql = "SELECT seller_approved, delivery_approved FROM users WHERE user_id = " . $row['user_id'];
+                $status_res = $conn->query($status_sql);
+                if ($status_res && $status_row = $status_res->fetch_assoc()) {
+                    $_SESSION['seller_approved'] = $status_row['seller_approved'];
+                    $_SESSION['delivery_approved'] = $status_row['delivery_approved'];
+                } else {
+                    $_SESSION['seller_approved'] = 0;
+                    $_SESSION['delivery_approved'] = 0;
+                }
 
-                $redirect = "index.php";
-                switch ($row['role']) {
-                    case 'Customer': $redirect = "customer_dashboard.php"; break;
-                    case 'Seller': $redirect = "seller_dashboard.php"; break;
-                    case 'Delivery': $redirect = "delivery_dashboard.php"; break;
-                    case 'Admin': $redirect = "admin_dashboard.php"; break;
-                    default: $redirect = "index.php"; break;
+                // Redirect Logic - Everyone acts as Customer initially, unless Admin
+                $redirect = "customer_dashboard.php";
+                if ($row['role'] === 'Admin') {
+                    $redirect = "admin_dashboard.php";
                 }
 
                 if ($is_ajax) {

@@ -23,8 +23,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $stmt1->execute();
             $stmt1->close();
 
-            // 2. Update User Role to Seller
-            $stmt2 = $conn->prepare("UPDATE users SET role = 'Seller' WHERE user_id = ?");
+            // 2. Update User Details (Set Seller Approved Flag)
+            // We DO NOT change the 'role' column anymore, to preserve Customer access.
+            $stmt2 = $conn->prepare("UPDATE users SET seller_approved = 1 WHERE user_id = ?");
             $stmt2->bind_param("i", $applicant_user_id);
             $stmt2->execute();
             $stmt2->close();

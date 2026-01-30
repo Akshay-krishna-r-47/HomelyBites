@@ -1,7 +1,16 @@
 <?php
-include 'role_check.php';
-check_role_access('seller');
+session_start();
+// ACCESS CONTROL: Strict check for Seller Approval
+if (!isset($_SESSION['user_id']) || !isset($_SESSION['seller_approved']) || $_SESSION['seller_approved'] != 1) {
+    header("Location: customer_dashboard.php");
+    exit();
+}
+
+// We do NOT use role_check.php here because it enforces exclusive roles.
+// Users are always 'Customer' in the database role column.
+
 include 'db_connect.php';
+include_once 'helpers.php'; 
 
 $seller_id = $_SESSION['user_id'];
 $formatted_name = formatName($_SESSION['name']);

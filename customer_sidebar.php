@@ -3,42 +3,47 @@
 $current_page = basename($_SERVER['PHP_SELF']);
 
 // Check Seller Application Status if user is logged in
+// Check Seller Status
 $seller_link_text = "Become Seller";
 $seller_link_icon = "fa-solid fa-store";
 $is_seller_pending = false;
+$is_seller_approved = (isset($_SESSION['seller_approved']) && $_SESSION['seller_approved'] == 1);
 
-if (isset($_SESSION['user_id'])) {
-    // We need db connection here if it's not already included in the parent page
-    // Using require_once to be safe
+if (isset($_SESSION['user_id']) && !$is_seller_approved) {
     include_once 'db_connect.php'; 
-    
     $check_sidebar_stmt = $conn->prepare("SELECT status FROM seller_applications WHERE user_id = ? ORDER BY created_at DESC LIMIT 1");
     if ($check_sidebar_stmt) {
         $check_sidebar_stmt->bind_param("i", $_SESSION['user_id']);
         $check_sidebar_stmt->execute();
         $check_sidebar_stmt->bind_result($app_status);
         if ($check_sidebar_stmt->fetch()) {
-            if ($app_status == 'Pending') {
+             if ($app_status == 'Pending') {
                 $seller_link_text = "Application Pending";
                 $seller_link_icon = "fa-solid fa-hourglass-half";
                 $is_seller_pending = true;
-            } elseif ($app_status == 'Approved') {
-                // If Approved but still logged in as Customer, maybe show "Switch to Seller"?
-                // For now, requirement says "Hide Become Seller if role = seller", 
-                // but if role is Customer AND status is Approved, they probably need to re-login.
-                // We'll keep it simple:
-                $seller_link_text = "Seller Approved"; 
-            }
+             } elseif ($app_status == 'Approved') {
+                 // Fallback if session wasn't updated yet
+                 $is_seller_approved = true;
+                 $_SESSION['seller_approved'] = 1; // Auto-sync session
+             }
         }
         $check_sidebar_stmt->close();
     }
 }
-// Check Delivery Application Status
+
+if ($is_seller_approved) {
+    $seller_link_text = "Seller Dashboard";
+    $seller_link_icon = "fa-solid fa-store";
+}
+
+
+// Check Delivery Status
 $delivery_link_text = "Become Delivery Partner";
 $delivery_link_icon = "fa-solid fa-truck";
 $is_delivery_pending = false;
+$is_delivery_approved = (isset($_SESSION['delivery_approved']) && $_SESSION['delivery_approved'] == 1);
 
-if (isset($_SESSION['user_id']) && isset($conn)) {
+if (isset($_SESSION['user_id']) && !$is_delivery_approved) {
     $check_delivery_stmt = $conn->prepare("SELECT status FROM delivery_applications WHERE user_id = ? ORDER BY created_at DESC LIMIT 1");
     if ($check_delivery_stmt) {
         $check_delivery_stmt->bind_param("i", $_SESSION['user_id']);
@@ -49,10 +54,18 @@ if (isset($_SESSION['user_id']) && isset($conn)) {
                 $delivery_link_text = "Application Pending";
                 $delivery_link_icon = "fa-solid fa-hourglass-half";
                 $is_delivery_pending = true;
+             } elseif ($del_app_status == 'Approved') {
+                 $is_delivery_approved = true;
+                 $_SESSION['delivery_approved'] = 1; // Auto-sync session
              }
         }
         $check_delivery_stmt->close();
     }
+}
+
+if ($is_delivery_approved) {
+    $delivery_link_text = "Delivery Dashboard";
+    $delivery_link_icon = "fa-solid fa-truck";
 }
 ?>
 <style>
@@ -236,15 +249,21 @@ if (isset($_SESSION['user_id']) && isset($conn)) {
                 <i class="fa-solid fa-user"></i> <span>Profile</span>
             </a>
         </li>
-        <?php if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'Seller'): ?>
         <li>
-            <a href="become_seller.php" class="<?php echo ($current_page == 'become_seller.php') ? 'active' : ''; ?>" <?php echo $is_seller_pending ? 'style="color: #f39c12;"' : ''; ?>>
+            <a href="notifications.php?view=customer" class="<?php echo ($current_page == 'notifications.php') ? 'active' : ''; ?>">
+                <i class="fa-solid fa-bell"></i> <span>Notifications</span>
+            </a>
+        </li>
+        <!-- Seller Link -->
+        <li>
+            <a href="<?php echo $is_seller_approved ? 'seller_dashboard.php' : 'become_seller.php'; ?>" class="<?php echo ($current_page == 'become_seller.php' || $current_page == 'seller_dashboard.php') ? 'active' : ''; ?>" <?php echo $is_seller_pending ? 'style="color: #f39c12;"' : ''; ?>>
                 <i class="<?php echo $seller_link_icon; ?>"></i> <span><?php echo $seller_link_text; ?></span>
             </a>
         </li>
-        <?php endif; ?>
+        
+        <!-- Delivery Link -->
         <li>
-            <a href="become_delivery_partner.php" class="<?php echo ($current_page == 'become_delivery_partner.php') ? 'active' : ''; ?>" <?php echo $is_delivery_pending ? 'style="color: #f39c12;"' : ''; ?>>
+            <a href="<?php echo $is_delivery_approved ? 'delivery_dashboard.php' : 'become_delivery_partner.php'; ?>" class="<?php echo ($current_page == 'become_delivery_partner.php' || $current_page == 'delivery_dashboard.php') ? 'active' : ''; ?>" <?php echo $is_delivery_pending ? 'style="color: #f39c12;"' : ''; ?>>
                 <i class="<?php echo $delivery_link_icon; ?>"></i> <span><?php echo $delivery_link_text; ?></span>
             </a>
         </li>

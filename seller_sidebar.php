@@ -132,7 +132,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
     <ul class="nav-links">
         <li>
             <a href="seller_dashboard.php" class="<?php echo ($current_page == 'seller_dashboard.php') ? 'active' : ''; ?>">
-                <i class="fa-solid fa-table-columns"></i> <span>Dashboard</span>
+                <i class="fa-solid fa-gauge-high"></i> <span>Dashboard</span>
             </a>
         </li>
         <li>
@@ -155,11 +155,32 @@ $current_page = basename($_SERVER['PHP_SELF']);
                 <i class="fa-solid fa-store"></i> <span>Profile</span>
             </a>
         </li>
+        <li>
+            <a href="notifications.php?view=seller" class="<?php echo ($current_page == 'notifications.php') ? 'active' : ''; ?>">
+                <i class="fa-solid fa-bell"></i> <span>Notifications</span>
+            </a>
+        </li>
     </ul>
 
-    <div class="logout-link">
-        <a href="#" onclick="location.replace('logout.php'); return false;">
-            <i class="fa-solid fa-right-from-bracket"></i> <span>Logout</span>
-        </a>
+    <div style="margin-top: auto; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1);">
+        <ul class="nav-links">
+             <?php if (isset($_SESSION['delivery_approved']) && $_SESSION['delivery_approved'] == 1): ?>
+            <li>
+                <a href="delivery_dashboard.php">
+                    <i class="fa-solid fa-truck"></i> <span>Delivery Panel</span>
+                </a>
+            </li>
+            <?php endif; ?>
+            <li>
+                <a href="customer_dashboard.php">
+                    <i class="fa-solid fa-house-user"></i> <span>Back to Customer</span>
+                </a>
+            </li>
+            <li>
+                <a href="logout.php">
+                    <i class="fa-solid fa-right-from-bracket"></i> <span>Logout</span>
+                </a>
+            </li>
+        </ul>
     </div>
 </aside>

@@ -28,7 +28,11 @@ $sql_earnings = "
 ";
 // Note: Ideally order_items has 'price' fixed. I'll assume f.price for now to ensure query works with our known schema.
 
-$result = $conn->execute_query($sql_earnings, [$seller_id]);
+$stmt = $conn->prepare($sql_earnings);
+$stmt->bind_param("i", $seller_id);
+$stmt->execute();
+$result = $stmt->get_result();
+$stmt->close();
 $daily_data = [];
 
 while ($row = $result->fetch_assoc()) {
@@ -55,22 +59,22 @@ while ($row = $result->fetch_assoc()) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Earnings - Homely Bites</title>
-    <link href="https://fonts.googleapis.com/css2?family=Lemon&family=Lato:wght@300;400;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        :root { --primary-color: #27ae60; --brand-green: #008000; --bg-body: #fdfbf7; --card-bg: #FFFFFF; --text-dark: #2c3e50; --text-muted: #7f8c8d; --header-height: 80px; }
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Lato', sans-serif; }
+        :root { --primary-color: #27ae60; --brand-green: #0a8f08; --bg-body: #f8f8f8; --card-bg: #FFFFFF; --text-dark: #222; --text-muted: #666; --header-height: 80px; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
         body { background-color: var(--bg-body); color: var(--text-dark); display: flex; min-height: 100vh; }
         .main-content { flex: 1; display: flex; flex-direction: column; width: 0; transition: all 0.4s; }
-        header { height: var(--header-height); background-color: var(--card-bg); padding: 0 40px; display: flex; align-items: center; justify-content: flex-end; position: sticky; top: 0; z-index: 900; border-bottom: 1px solid rgba(0,0,0,0.06); }
+        header { height: var(--header-height); background-color: var(--card-bg); padding: 0 40px; display: flex; align-items: center; justify-content: flex-end; position: sticky; top: 0; z-index: 900; border-bottom: 1px solid rgba(0,0,0,0.06); gap: 15px; }
         .content-container { padding: 40px 50px; width: 100%; max-width: 1600px; margin: 0 auto; }
         
         .page-header { margin-bottom: 30px; }
-        .page-header h2 { font-family: 'Playfair Display', serif; font-size: 2.2rem; }
+        .page-header h2 { font-weight: 700; font-size: 2.2rem; }
 
         .earnings-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 30px; margin-bottom: 40px; }
         .stat-card { background: var(--card-bg); padding: 30px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); text-align: center; border: 1px solid rgba(0,0,0,0.05); }
-        .stat-card h3 { font-size: 2.5rem; color: var(--brand-green); margin-bottom: 5px; font-family: 'Playfair Display', serif; }
+        .stat-card h3 { font-size: 2.5rem; color: var(--brand-green); margin-bottom: 5px; font-weight: 700; }
         .stat-card p { color: var(--text-muted); font-weight: 600; text-transform: uppercase; font-size: 0.85rem; letter-spacing: 0.5px; }
 
         .history-section { background: var(--card-bg); padding: 30px; border-radius: 16px; border: 1px solid rgba(0,0,0,0.05); }
@@ -85,13 +89,22 @@ while ($row = $result->fetch_assoc()) {
     <?php include 'seller_sidebar.php'; ?>
     <div class="main-content">
         <header>
-            <div style="text-align: right; margin-right: 15px;">
+            <div style="text-align: right;">
                 <p style="font-weight: 700; margin-bottom: 2px;"><?php echo htmlspecialchars($_SESSION['name']); ?></p>
                 <span style="font-size: 0.8rem; color: #888;">Seller Panel</span>
             </div>
-            <div style="width: 40px; height: 40px; background: #ddd; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                <i class="fa-solid fa-store"></i>
+            <div style="width: 40px; height: 40px; background: #eee; border-radius: 50%; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                <?php 
+                $header_name = formatName($_SESSION['name']);
+                $header_initials = getAvatarInitials($header_name);
+                $header_img = getProfileImage($_SESSION['user_id'], $conn);
+                if ($header_img): ?>
+                    <img src="<?php echo $header_img; ?>" alt="Profile" style="width: 100%; height: 100%; object-fit: cover;">
+                <?php else: ?>
+                    <span style="font-weight: 600; color: #555;"><?php echo $header_initials; ?></span>
+                <?php endif; ?>
             </div>
+
         </header>
 
         <div class="content-container">

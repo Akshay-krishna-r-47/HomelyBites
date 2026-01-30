@@ -22,8 +22,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $update_app->bind_param("i", $application_id);
             $update_app->execute();
 
-            // 2. Update User Role
-            $update_user = $conn->prepare("UPDATE users SET role = 'Delivery' WHERE user_id = ?");
+            // 2. Update User Details (Set Delivery Approved Flag)
+            $update_user = $conn->prepare("UPDATE users SET delivery_approved = 1 WHERE user_id = ?");
             $update_user->bind_param("i", $applicant_user_id);
             $update_user->execute();
             
