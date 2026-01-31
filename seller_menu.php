@@ -35,41 +35,60 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $status = $_POST['status'];
         
         if ($_POST['action'] == 'add') {
-             $image_path = handleImageUpload($_FILES['image']);
-             
-             $stmt = $conn->prepare("INSERT INTO foods (seller_id, name, price, category, image, status) VALUES (?, ?, ?, ?, ?, ?)");
-             $stmt->bind_param("isdsss", $seller_id, $name, $price, $category, $image_path, $status);
-             
-             if ($stmt->execute()) {
-                 $message = "Item added successfully."; $message_type = "success";
+             // Validation
+             if ($price < 0) {
+                 $message = "Price cannot be negative.";
+                 $message_type = "error";
+             } elseif (is_numeric($name)) {
+                 $message = "Item name cannot be purely numeric (e.g. '111111'). Please enter a valid name.";
+                 $message_type = "error";
              } else {
-                 $message = "Error adding item."; $message_type = "error";
+                 $image_path = handleImageUpload($_FILES['image']);
+                 
+                 $stmt = $conn->prepare("INSERT INTO foods (seller_id, name, price, category, image, status) VALUES (?, ?, ?, ?, ?, ?)");
+                 $stmt->bind_param("isdsss", $seller_id, $name, $price, $category, $image_path, $status);
+                 
+                 if ($stmt->execute()) {
+                     $message = "Item added successfully."; $message_type = "success";
+                 } else {
+                     $message = "Error adding item."; $message_type = "error";
+                 }
+                 $stmt->close();
              }
-             $stmt->close();
 
         } elseif ($_POST['action'] == 'edit') {
             $food_id = intval($_POST['food_id']);
             
-            // Check if new image uploaded
-            $new_image = handleImageUpload($_FILES['image']);
-            
-            if ($new_image) {
-                // Delete old image? Optional.
-                $sql = "UPDATE foods SET name=?, price=?, category=?, status=?, image=? WHERE id=? AND seller_id=?";
-                $stmt = $conn->prepare($sql);
-                $stmt->bind_param("sdsssii", $name, $price, $category, $status, $new_image, $food_id, $seller_id);
+            if ($price < 0) {
+                $message = "Price cannot be negative.";
+                $message_type = "error";
+            } elseif (is_numeric($name)) {
+                $message = "Item name cannot be purely numeric. Please enter a valid name.";
+                $message_type = "error";
             } else {
-                $sql = "UPDATE foods SET name=?, price=?, category=?, status=? WHERE id=? AND seller_id=?";
-                $stmt = $conn->prepare($sql);
-                $stmt->bind_param("sdssii", $name, $price, $category, $status, $food_id, $seller_id);
+                // Check if new image uploaded
+                $new_image = handleImageUpload($_FILES['image']);
+                
+                if ($new_image) {
+                    // Delete old image? Optional.
+                    $sql = "UPDATE foods SET name=?, price=?, category=?, status=?, image=? WHERE id=? AND seller_id=?";
+                    $stmt = $conn->prepare($sql);
+                    $stmt->bind_param("sdsssii", $name, $price, $category, $status, $new_image, $food_id, $seller_id);
+                } else {
+                    $sql = "UPDATE foods SET name=?, price=?, category=?, status=? WHERE id=? AND seller_id=?";
+                    $stmt = $conn->prepare($sql);
+                    $stmt->bind_param("sdssii", $name, $price, $category, $status, $food_id, $seller_id);
+                }
+
+                if ($stmt->execute()) {
+                     $message = "Item updated successfully."; $message_type = "success";
+                } else {
+                     $message = "Error updating item."; $message_type = "error";
+                }
+                $stmt->close();
             }
 
-            if ($stmt->execute()) {
-                 $message = "Item updated successfully."; $message_type = "success";
-            } else {
-                 $message = "Error updating item."; $message_type = "error";
-            }
-            $stmt->close();
+
 
         } elseif ($_POST['action'] == 'delete') {
             $food_id = intval($_POST['food_id_delete']);
@@ -151,6 +170,15 @@ $stmt->close();
         .alert { padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: center; }
         .alert-success { background: #d4edda; color: #155724; }
         .alert-error { background: #f8d7da; color: #721c24; }
+        .alert-error { background: #f8d7da; color: #721c24; }
+        
+        .btn-cancel { background: #f1f1f1; color: #333; border: 1px solid #ddd; padding: 12px 24px; border-radius: 8px; font-weight: 500; cursor: pointer; }
+        .btn-cancel:hover { background: #e2e2e2; }
+        .btn-danger { background: #fee2e2; color: #dc2626; border: 1px solid #fecaca; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; }
+        .btn-danger:hover { background: #fee2e2; color: #b91c1c; border-color: #fca5a5; }
+        
+        .delete-confirm-content { text-align: center; padding: 20px; }
+        .delete-icon { width: 60px; height: 60px; background: #fee2e2; color: #dc2626; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; margin: 0 auto 20px; }
     </style>
 </head>
 <body>
@@ -195,11 +223,7 @@ $stmt->close();
                 </div>
                 <div class="card-actions">
                     <button class="btn-action" onclick='openEditModal(<?php echo json_encode($food); ?>)'><i class="fa-solid fa-pen"></i></button>
-                    <form method="POST" onsubmit="return confirm('Delete this item?');" style="display:inline;">
-                        <input type="hidden" name="action" value="delete">
-                        <input type="hidden" name="food_id_delete" value="<?php echo $food['id']; ?>">
-                        <button type="submit" class="btn-action btn-delete"><i class="fa-solid fa-trash"></i></button>
-                    </form>
+                    <button class="btn-action btn-delete" onclick="openDeleteModal(<?php echo $food['id']; ?>)"><i class="fa-solid fa-trash"></i></button>
                 </div>
             </div>
             <?php endforeach; ?>
@@ -228,7 +252,7 @@ $stmt->close();
                 </div>
                 <div class="form-group">
                     <label>Price (₹)</label>
-                    <input type="number" step="0.01" name="price" id="itemPrice" required>
+                    <input type="number" step="0.01" min="0" name="price" id="itemPrice" required>
                 </div>
                 <div class="form-group">
                     <label>Category</label>
@@ -253,6 +277,24 @@ $stmt->close();
                 </div>
                 <button type="submit" class="btn-primary" style="width: 100%;">Save Item</button>
             </form>
+        </div>
+    </div>
+
+    <!-- DELETE CONFIRMATION MODAL -->
+    <div id="deleteModal" class="modal">
+        <div class="modal-content" style="width: 400px;">
+            <div class="delete-confirm-content">
+                <div class="delete-icon"><i class="fa-solid fa-trash-alt"></i></div>
+                <h3 style="margin-bottom: 10px; color: #111;">Delete Item?</h3>
+                <p style="color: #666; margin-bottom: 25px; font-size: 14px;">Are you sure you want to delete this item? This action cannot be undone.</p>
+                
+                <form method="POST" style="display: flex; gap: 15px; justify-content: center;">
+                    <input type="hidden" name="action" value="delete">
+                    <input type="hidden" name="food_id_delete" id="deleteFoodId">
+                    <button type="button" class="btn-cancel" onclick="closeDeleteModal()">Cancel</button>
+                    <button type="submit" class="btn-danger">Delete</button>
+                </form>
+            </div>
         </div>
     </div>
 
@@ -292,7 +334,23 @@ $stmt->close();
             modal.classList.remove('active');
         }
         
-        window.onclick = function(e) { if(e.target == modal) closeModal(); }
+        window.onclick = function(e) { 
+            if(e.target == modal) closeModal(); 
+            if(e.target == deleteModal) closeDeleteModal();
+        }
+
+        // Delete Modal Logic
+        const deleteModal = document.getElementById('deleteModal');
+        const deleteFoodId = document.getElementById('deleteFoodId');
+        
+        function openDeleteModal(id) {
+            deleteFoodId.value = id;
+            deleteModal.classList.add('active');
+        }
+        
+        function closeDeleteModal() {
+            deleteModal.classList.remove('active');
+        }
     </script>
 </body>
 </html>
