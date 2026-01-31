@@ -98,14 +98,9 @@ $user_profile_image = getProfileImage($_SESSION['user_id'], $conn);
 
     <?php include 'customer_sidebar.php'; ?>
 
-    <!-- Main Content -->
     <div class="main-content">
         <header>
-            <div class="search-container">
-                <i class="fa-solid fa-search"></i>
-                <input type="text" placeholder="Search for food...">
-            </div>
-
+            <div class="search-container" style="visibility: hidden;"></div> <!-- Spacer -->
             <div class="user-info">
                 <div>
                     <p style="font-weight: 700; font-size: 0.95rem; margin-bottom: 2px; color: var(--text-dark);"><?php echo $user_name; ?></p>
@@ -125,20 +120,81 @@ $user_profile_image = getProfileImage($_SESSION['user_id'], $conn);
             <div class="page-header">
                 <h2>My Cart</h2>
             </div>
+
+            <?php
+            // Fetch cart items
+            $cart_sql = "SELECT c.id as cart_id, c.quantity, f.name, f.price, f.image, f.seller_id, u.name as seller_name 
+                         FROM cart c 
+                         JOIN foods f ON c.food_id = f.id 
+                         JOIN users u ON f.seller_id = u.user_id 
+                         WHERE c.user_id = ?";
+            $stmt = $conn->prepare($cart_sql);
+            $stmt->bind_param("i", $_SESSION['user_id']);
+            $stmt->execute();
+            $result = $stmt->get_result();
             
-            <div class="empty-state">
-                <i class="fa-solid fa-cart-shopping"></i>
-                <p>Your cart is currently empty.</p>
-                <a href="customer_dashboard.php" class="btn-browse">Browse Food</a>
-            </div>
+            $total_price = 0;
+            ?>
+
+            <?php if ($result->num_rows > 0): ?>
+                <div style="background: white; border-radius: 16px; box-shadow: var(--shadow-card); overflow: hidden;">
+                    <?php while ($row = $result->fetch_assoc()): 
+                        $item_total = $row['price'] * $row['quantity'];
+                        $total_price += $item_total;
+                        $f_image = !empty($row['image']) && file_exists($row['image']) ? $row['image'] : 'assets/images/image-coming-soon.png';
+                        // Fix seller name fallback if valid column missing or empty
+                        $seller_name = !empty($row['seller_name']) ? htmlspecialchars($row['seller_name']) : 'Homely Chef'; 
+                    ?>
+                    <div style="display: flex; padding: 20px; border-bottom: 1px solid #f0f0f0; align-items: center;">
+                        <img src="<?php echo $f_image; ?>" alt="<?php echo htmlspecialchars($row['name']); ?>" style="width: 80px; height: 80px; border-radius: 8px; object-fit: cover; margin-right: 20px;">
+                        <div style="flex: 1;">
+                            <h4 style="font-size: 1.1rem; margin-bottom: 4px;"><?php echo htmlspecialchars($row['name']); ?></h4>
+                            <p style="font-size: 0.9rem; color: #888; margin-bottom: 4px;">By <?php echo $seller_name; ?></p>
+                            <div style="font-weight: 600; color: var(--text-dark); margin-bottom: 5px;">₹<?php echo $row['price']; ?></div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <form action="handle_cart.php" method="POST" style="margin:0;">
+                                    <input type="hidden" name="action" value="update">
+                                    <input type="hidden" name="cart_id" value="<?php echo $row['cart_id']; ?>">
+                                    <input type="hidden" name="change" value="-1">
+                                    <button type="submit" style="width: 28px; height: 28px; border: 1px solid #ddd; background: #fff; border-radius: 4px; cursor: pointer; color: #555;">-</button>
+                                </form>
+                                <span style="font-weight: 600; font-size: 0.95rem; min-width: 20px; text-align: center;"><?php echo $row['quantity']; ?></span>
+                                <form action="handle_cart.php" method="POST" style="margin:0;">
+                                    <input type="hidden" name="action" value="update">
+                                    <input type="hidden" name="cart_id" value="<?php echo $row['cart_id']; ?>">
+                                    <input type="hidden" name="change" value="1">
+                                    <button type="submit" style="width: 28px; height: 28px; border: 1px solid var(--brand-green); color: var(--brand-green); background: #f0fff0; border-radius: 4px; cursor: pointer;">+</button>
+                                </form>
+                            </div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="font-size: 1.2rem; font-weight: 700; color: var(--brand-green); margin-bottom: 10px;">₹<?php echo $item_total; ?></div>
+                            <form action="handle_cart.php" method="POST" style="margin-top: 5px;">
+                                <input type="hidden" name="action" value="remove">
+                                <input type="hidden" name="cart_id" value="<?php echo $row['cart_id']; ?>">
+                                <button type="submit" style="background: none; border: none; color: #e74c3c; font-size: 0.85rem; cursor: pointer; padding: 5px 0; font-weight: 500;"><i class="fa-solid fa-trash-can"></i> Remove</button>
+                            </form>
+                        </div>
+                    </div>
+                    <?php endwhile; ?>
+                    
+                    <div style="padding: 20px; background: #fdfdfd; text-align: right;">
+                        <p style="font-size: 1.1rem; margin-bottom: 10px;">Total: <span style="font-weight: 700; font-size: 1.5rem;">₹<?php echo $total_price; ?></span></p>
+                        <a href="customer_checkout.php" class="btn-browse" style="background: var(--brand-green); color: white; border: none; font-size: 1rem; padding: 12px 30px; cursor: pointer; display: inline-block;">Proceed to Checkout</a>
+                    </div>
+                </div>
+            <?php else: ?>
+                <div class="empty-state">
+                    <i class="fa-solid fa-cart-shopping"></i>
+                    <p>Your cart is empty.</p>
+                    <a href="customer_dashboard.php" class="btn-browse">Browse Food</a>
+                </div>
+            <?php endif; ?>
+            <?php $stmt->close(); ?>
+
         </div>
     </div>
-
-    <script>
-        function toggleSidebar() {
-            const sidebar = document.querySelector('.sidebar');
-            sidebar.classList.toggle('collapsed');
-        }
-    </script>
+    <script>function toggleSidebar(){ document.querySelector('.sidebar').classList.toggle('collapsed'); }</script>
 </body>
 </html>
+

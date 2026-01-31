@@ -189,18 +189,26 @@ $user_profile_image = getProfileImage($_SESSION['user_id'], $conn);
                                 $f_image = 'assets/images/image-coming-soon.png';
                             }
                             ?>
-                            <div class="food-card">
-                                <img src="<?php echo $f_image; ?>" alt="<?php echo $f_name; ?>" class="food-img">
-                                <div class="food-details">
-                                    <div class="food-name"><?php echo $f_name; ?></div>
-                                    <div class="food-cat"><?php echo $f_cat; ?></div>
-                                    
-                                    <div class="food-footer">
-                                        <div class="food-rating"><i class="fa-solid fa-star"></i> 4.5</div>
-                                        <div class="food-price">₹<?php echo $f_price; ?></div>
+                            <div class="food-card" style="display:flex; flex-direction:column; height:100%;">
+                                <a href="food_details.php?id=<?php echo $row['id']; ?>" style="text-decoration: none; color: inherit; display: block; flex:1;">
+                                    <img src="<?php echo $f_image; ?>" alt="<?php echo $f_name; ?>" class="food-img">
+                                    <div class="food-details">
+                                        <div class="food-name"><?php echo $f_name; ?></div>
+                                        <div class="food-cat"><?php echo $f_cat; ?></div>
+                                        
+                                        <div class="food-footer">
+                                            <div class="food-rating"><i class="fa-solid fa-star"></i> 4.5</div>
+                                            <div class="food-price">₹<?php echo $f_price; ?></div>
+                                        </div>
                                     </div>
-                                    
-                                    <!-- Add button overlay not needed, just simple clean card -->
+                                </a>
+                                <div style="padding: 0 16px 16px 16px;">
+                                    <form action="handle_cart.php" method="POST">
+                                        <input type="hidden" name="food_id" value="<?php echo $row['id']; ?>">
+                                        <button type="submit" name="action" value="add" style="width:100%; padding: 8px; background:white; border:1px solid #0a8f08; color:#0a8f08; border-radius:4px; font-weight:600; cursor:pointer;" onmouseover="this.style.background='#0a8f08'; this.style.color='white';" onmouseout="this.style.background='white'; this.style.color='#0a8f08';">
+                                            ADD TO CART
+                                        </button>
+                                    </form>
                                 </div>
                             </div>
                             <?php

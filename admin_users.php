@@ -18,7 +18,8 @@ $admin_name = htmlspecialchars($_SESSION['name']);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Manage Users - Homely Bites</title>
     <!-- Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Lemon&family=Lato:wght@300;400;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Lemon&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     
     <style>
@@ -34,7 +35,7 @@ $admin_name = htmlspecialchars($_SESSION['name']);
             --shadow-sm: 0 2px 8px rgba(0,0,0,0.04);
         }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Lato', sans-serif; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
         body { background-color: var(--bg-body); color: var(--text-dark); display: flex; min-height: 100vh; }
         
         /* Main Content */

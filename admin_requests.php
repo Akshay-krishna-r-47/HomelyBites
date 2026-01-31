@@ -24,7 +24,8 @@ $pending_count = $pending_result->num_rows;
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Seller Requests - Homely Bites</title>
     <!-- Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Lemon&family=Lato:wght@300;400;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Lemon&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     
     <style>
@@ -40,7 +41,7 @@ $pending_count = $pending_result->num_rows;
             --shadow-sm: 0 2px 8px rgba(0,0,0,0.04);
         }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Lato', sans-serif; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
         body { background-color: var(--bg-body); color: var(--text-dark); display: flex; min-height: 100vh; }
         
         /* Main Content */
@@ -72,7 +73,7 @@ $pending_count = $pending_result->num_rows;
         }
         
         .box-title {
-            font-family: 'Playfair Display', serif;
+            font-family: 'Poppins', sans-serif;
             font-size: 1.4rem;
             margin-bottom: 25px;
             color: var(--text-dark);
@@ -129,7 +130,7 @@ $pending_count = $pending_result->num_rows;
         </header>
 
         <div class="content-container">
-            <h2 style="font-family: 'Playfair Display', serif; font-size: 2.2rem; margin-bottom: 30px;">Seller Requests</h2>
+            <h2 style="font-family: 'Poppins', sans-serif; font-size: 2.2rem; margin-bottom: 30px; font-weight: 700;">Seller Requests</h2>
             
             <?php if (isset($_SESSION['message'])): ?>
                 <div style="padding: 10px; margin-bottom: 20px; border-radius: 6px; background: <?php echo ($_SESSION['message_type'] == 'success') ? '#d4edda' : '#f8d7da'; ?>; color: <?php echo ($_SESSION['message_type'] == 'success') ? '#155724' : '#721c24'; ?>;">

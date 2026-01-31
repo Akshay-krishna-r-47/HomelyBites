@@ -166,24 +166,49 @@ $stmt->close();
                                 <th>Items</th>
                                 <th>Status</th>
                                 <th>Bill</th>
+                                <th>Action</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <?php foreach ($recent_orders as $order): ?>
+                            <?php $i = 1; foreach ($recent_orders as $order): ?>
+                                <?php
+                                    // Fetch items for this order
+                                    $item_str = "";
+                                    $oid = $order['order_id'];
+                                    $sql_items = "SELECT f.name, oi.quantity FROM order_items oi JOIN foods f ON oi.food_id = f.id WHERE oi.order_id = ?";
+                                    $stmt_items = $conn->prepare($sql_items);
+                                    $stmt_items->bind_param("i", $oid);
+                                    $stmt_items->execute();
+                                    $res_items = $stmt_items->get_result();
+                                    $items_arr = [];
+                                    while($item = $res_items->fetch_assoc()){
+                                        $items_arr[] = $item['name'] . " (" . $item['quantity'] . ")";
+                                    }
+                                    $item_str = implode(", ", $items_arr);
+                                    $stmt_items->close();
+
+                                    // Fallback for old orders that store items as string in 'items' column
+                                    if (empty($item_str) && !empty($order['items'])) {
+                                        $item_str = $order['items'];
+                                    }
+                                ?>
                                 <?php 
+                                    $status_label = !empty($order['status']) ? $order['status'] : 'Pending';
                                     $status_class = '';
-                                    switch($order['status']) {
+                                    switch($status_label) {
                                         case 'Preparing': $status_class = 'preparing'; break;
                                         case 'Out for Delivery': $status_class = 'out'; break;
                                         case 'Delivered': $status_class = 'delivered'; break;
                                         case 'Cancelled': $status_class = 'cancelled'; break;
+                                        default: $status_class = 'preparing'; // Default style
                                     }
                                 ?>
                             <tr>
-                                <td>#HB-<?php echo 1000 + $order['order_id']; ?></td>
-                                <td><?php echo htmlspecialchars($order['items']); ?></td>
-                                <td><span class="status <?php echo $status_class; ?>"><?php echo $order['status']; ?></span></td>
+                                <td><?php echo $i++; ?></td>
+                                <td><?php echo htmlspecialchars($item_str); ?></td>
+                                <td><span class="status <?php echo $status_class; ?>"><?php echo $status_label; ?></span></td>
                                 <td>₹<?php echo number_format($order['total_amount']); ?></td>
+                                <td><a href="order_details.php?id=<?php echo $order['order_id']; ?>" style="color: var(--brand-green); font-weight: 600; text-decoration: none; font-size: 0.9rem;">View Details</a></td>
                             </tr>
                             <?php endforeach; ?>
                         </tbody>

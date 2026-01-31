@@ -1,7 +1,14 @@
 <?php
 include 'role_check.php';
-// Don't enforce specific role, just login
-check_role_access('customer'); // Basic check to ensure login. The function redirects if not logged in.
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+// Allow ANY logged in user (Admin, Customer, Seller, Delivery)
+// We avoid check_role_access('customer') because it redirects Admins to dashboard.
+if (!isset($_SESSION['user_id'])) {
+    header("Location: login.php");
+    exit();
+}
 // We override role checks below for specific sidebars if needed, 
 // but role_check with 'customer' essentially just validates session login for non-banned users.
 
@@ -27,7 +34,7 @@ $view_role = isset($_GET['view']) ? $_GET['view'] : 'customer';
 // Fetch Notifications
 $sql = "SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC";
 $stmt = $conn->prepare($sql);
-$stmt->bind_param("i", $user_id);
+$stmt->bind_param("s", $user_id); // Changed to 's' to handle 'admin' string safely
 $stmt->execute();
 $result = $stmt->get_result();
 $notifications = [];
@@ -37,7 +44,12 @@ while ($row = $result->fetch_assoc()) {
 $stmt->close();
 
 // Mark all as read (Simple implementation)
-$conn->query("UPDATE notifications SET is_read = 1 WHERE user_id = $user_id");
+// Mark all as read
+$update_sql = "UPDATE notifications SET is_read = 1 WHERE user_id = ?";
+$stmt = $conn->prepare($update_sql);
+$stmt->bind_param("s", $user_id); // Bind as string to handle 'admin' or int IDs safely
+$stmt->execute();
+$stmt->close();
 
 ?>
 <!DOCTYPE html>

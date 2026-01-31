@@ -16,7 +16,7 @@ $current_page = basename($_SERVER['PHP_SELF']);
     }
 
     /* Basic Resets included here for standalone safety */
-    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Lato', sans-serif; }
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
     body { background-color: var(--bg-body); color: var(--text-dark); display: flex; min-height: 100vh; }
 
     .sidebar {
@@ -207,6 +207,16 @@ $pending_delivery_count = ($del_req_result && $row = $del_req_result->fetch_asso
                 <?php if ($total_orders_count > 0): ?>
                     <span class="badge"><?php echo $total_orders_count; ?></span>
                 <?php endif; ?>
+            </a>
+        </li>
+        <li>
+            <a href="admin_broadcast.php" class="<?php echo ($current_page == 'admin_broadcast.php') ? 'active' : ''; ?>">
+                <i class="fa-solid fa-bullhorn"></i> <span>Broadcasts</span>
+            </a>
+        </li>
+        <li>
+            <a href="admin_settings.php" class="<?php echo ($current_page == 'admin_settings.php') ? 'active' : ''; ?>">
+                <i class="fa-solid fa-gear"></i> <span>Settings</span>
             </a>
         </li>
         <li>

@@ -21,7 +21,7 @@ $admin_initials = getAvatarInitials($formatted_name);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard - Homely Bites</title>
     <!-- Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Lemon&family=Lato:wght@300;400;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Lemon&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     
     <style>
@@ -37,7 +37,7 @@ $admin_initials = getAvatarInitials($formatted_name);
             --shadow-sm: 0 2px 8px rgba(0,0,0,0.04);
         }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Lato', sans-serif; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
         body { background-color: var(--bg-body); color: var(--text-dark); display: flex; min-height: 100vh; }
         
         /* Main Content */
@@ -219,13 +219,100 @@ $admin_initials = getAvatarInitials($formatted_name);
 
             </div>
 
+            <!-- Analytics Section -->
+            <h2 style="margin-top: 50px; margin-bottom: 30px; font-family: 'Poppins', sans-serif; font-size: 1.8rem; border-left: 5px solid #27ae60; padding-left: 15px;">Analytics Overview</h2>
+            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 30px; margin-bottom: 40px;">
+                <div class="dashboard-box" style="padding: 30px;">
+                    <h4 style="margin-bottom: 20px; font-weight: 700; color: #2c3e50;">Orders (Last 7 Days)</h4>
+                    <canvas id="ordersChart" height="150"></canvas>
+                </div>
+                <div class="dashboard-box" style="padding: 30px;">
+                    <h4 style="margin-bottom: 20px; font-weight: 700; color: #2c3e50;">User Distribution</h4>
+                    <canvas id="usersChart" height="200"></canvas>
+                </div>
+            </div>
+
         </div>
     </div>
     
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
         function toggleSidebar() {
             document.querySelector('.sidebar').classList.toggle('collapsed');
         }
+
+        // --- Analytics Logic ---
+        <?php
+            // 1. Orders Last 7 Days
+            $dates = [];
+            $counts = [];
+            for ($i = 6; $i >= 0; $i--) {
+                $date = date('Y-m-d', strtotime("-$i days"));
+                $dates[] = date('M d', strtotime($date));
+                // Assuming orders table created_at exists. If not, this might fail or return 0. 
+                // Using try/catch or simple query.
+                $res = $conn->query("SELECT COUNT(*) as c FROM orders WHERE DATE(created_at) = '$date'");
+                $counts[] = ($res && $r=$res->fetch_assoc()) ? $r['c'] : 0;
+            }
+
+            // 2. User Stats
+            // Fetch counts
+            $cust_res = $conn->query("SELECT COUNT(*) as c FROM users WHERE role='Customer'"); // Basic customer definition
+            $cust_count = ($cust_res && $r=$cust_res->fetch_assoc()) ? $r['c'] : 0;
+            
+            $seller_res = $conn->query("SELECT COUNT(*) as c FROM users WHERE seller_approved=1");
+            $seller_count = ($seller_res && $r=$seller_res->fetch_assoc()) ? $r['c'] : 0;
+            
+            $del_res = $conn->query("SELECT COUNT(*) as c FROM users WHERE delivery_approved=1");
+            $del_count = ($del_res && $r=$del_res->fetch_assoc()) ? $r['c'] : 0;
+        ?>
+
+        // Render Charts
+        document.addEventListener('DOMContentLoaded', function() {
+            // Orders Chart
+            const ctx1 = document.getElementById('ordersChart').getContext('2d');
+            new Chart(ctx1, {
+                type: 'line',
+                data: {
+                    labels: <?php echo json_encode($dates); ?>,
+                    datasets: [{
+                        label: 'Orders',
+                        data: <?php echo json_encode($counts); ?>,
+                        backgroundColor: 'rgba(39, 174, 96, 0.1)',
+                        borderColor: '#27ae60',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+                }
+            });
+
+            // Users Chart
+            const ctx2 = document.getElementById('usersChart').getContext('2d');
+            new Chart(ctx2, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Customers', 'Sellers', 'Delivery Partners'],
+                    datasets: [{
+                        data: [<?php echo $cust_count; ?>, <?php echo $seller_count; ?>, <?php echo $del_count; ?>],
+                        backgroundColor: ['#f1c40f', '#e67e22', '#3498db'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    cutout: '70%',
+                    plugins: { 
+                        legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8 } } 
+                    }
+                }
+            });
+        });
     </script>
 </body>
 </html>

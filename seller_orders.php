@@ -28,9 +28,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['order_id']) && isset($
         $update_stmt = $conn->prepare("UPDATE orders SET status = ? WHERE order_id = ?");
         $update_stmt->bind_param("si", $new_status, $order_id);
         if ($update_stmt->execute()) {
-            $message = "Order #HB-" . (1000 + $order_id) . " status updated to " . $new_status;
+            // Success
+            $update_stmt->close();
+            // Redirect to avoid resubmission
+            header("Location: seller_orders.php?msg=updated");
+            exit();
         } else {
-            $message = "Error updating status.";
+            $message = "Error updating status: " . $conn->error;
         }
         $update_stmt->close();
     } else {
@@ -176,8 +180,9 @@ $stmt->close();
                                 <input type="hidden" name="order_id" value="<?php echo $order['order_id']; ?>">
                                 <select name="status" class="status-select">
                                     <option value="Preparing" <?php if($order['status']=='Preparing') echo 'selected'; ?>>Preparing</option>
-                                    <option value="Ready" <?php if($order['status']=='Ready') echo 'selected'; ?>>Ready to Pickup</option>
-                                    <option value="Completed" <?php if($order['status']=='Completed') echo 'selected'; ?>>Completed</option>
+                                    <option value="Out for Delivery" <?php if($order['status']=='Out for Delivery') echo 'selected'; ?>>Out for Delivery</option>
+                                    <option value="Delivered" <?php if($order['status']=='Delivered') echo 'selected'; ?>>Delivered</option>
+                                    <option value="Cancelled" <?php if($order['status']=='Cancelled') echo 'selected'; ?>>Cancelled</option>
                                 </select>
                                 <button type="submit" class="btn-update">Update</button>
                             </form>

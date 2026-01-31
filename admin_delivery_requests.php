@@ -24,11 +24,12 @@ $pending_count = $pending_result ? $pending_result->num_rows : 0;
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Delivery Requests - Homely Bites</title>
     <!-- Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Lemon&family=Lato:wght@300;400;700&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Lemon&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         :root { --primary-color: #27ae60; --brand-green: #008000; --bg-body: #fdfbf7; --card-bg: #FFFFFF; --text-dark: #2c3e50; --text-muted: #7f8c8d; --header-height: 80px; --border-radius: 16px; --shadow-sm: 0 2px 8px rgba(0,0,0,0.04); }
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Lato', sans-serif; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
         body { background-color: var(--bg-body); color: var(--text-dark); display: flex; min-height: 100vh; }
         .main-content { flex: 1; display: flex; flex-direction: column; width: 0; transition: all 0.4s ease; }
         header { height: var(--header-height); background-color: var(--card-bg); padding: 0 40px; display: flex; align-items: center; justify-content: flex-end; position: sticky; top: 0; z-index: 900; border-bottom: 1px solid rgba(0,0,0,0.06); }
@@ -36,7 +37,7 @@ $pending_count = $pending_result ? $pending_result->num_rows : 0;
         .profile-pic { width: 42px; height: 42px; background: linear-gradient(135deg, var(--brand-green), #27ae60); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.1rem; }
         .content-container { padding: 40px 50px; max-width: 1600px; margin: 0 auto; width: 100%; }
         .dashboard-box { background-color: var(--card-bg); padding: 30px; border-radius: var(--border-radius); box-shadow: var(--shadow-sm); border: 1px solid rgba(0,0,0,0.06); }
-        .box-title { font-family: 'Playfair Display', serif; font-size: 1.4rem; margin-bottom: 25px; color: var(--text-dark); display: flex; justify-content: space-between; align-items: center; }
+        .box-title { font-family: 'Poppins', sans-serif; font-size: 1.4rem; margin-bottom: 25px; color: var(--text-dark); display: flex; justify-content: space-between; align-items: center; }
         table { width: 100%; border-collapse: separate; border-spacing: 0; }
         th { text-align: left; padding: 15px; color: var(--text-muted); font-weight: 600; font-size: 0.8rem; text-transform: uppercase; border-bottom: 2px solid #f0f0f0; }
         td { padding: 20px 15px; font-size: 0.95rem; border-bottom: 1px solid #f5f5f5; vertical-align: middle; }
@@ -63,7 +64,7 @@ $pending_count = $pending_result ? $pending_result->num_rows : 0;
         </header>
 
         <div class="content-container">
-            <h2 style="font-family: 'Playfair Display', serif; font-size: 2.2rem; margin-bottom: 30px;">Delivery Requests</h2>
+            <h2 style="font-family: 'Poppins', sans-serif; font-size: 2.2rem; margin-bottom: 30px; font-weight: 700;">Delivery Requests</h2>
             <?php if (isset($_SESSION['message'])): ?>
                 <div style="padding: 10px; margin-bottom: 20px; border-radius: 6px; background: <?php echo ($_SESSION['message_type'] == 'success') ? '#d4edda' : '#f8d7da'; ?>; color: <?php echo ($_SESSION['message_type'] == 'success') ? '#155724' : '#721c24'; ?>;">
                     <?php echo $_SESSION['message']; unset($_SESSION['message']); unset($_SESSION['message_type']); ?>

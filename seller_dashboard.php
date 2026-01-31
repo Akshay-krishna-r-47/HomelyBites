@@ -43,9 +43,55 @@ $stmt->close();
 // Let's just Count Foods for now as guaranteed. Earnings and Orders might need `seller_orders` logic first to be perfect.
 // I'll implement standard counts.
 
-$todays_orders = 0; 
+// 2. Today's Orders
+$todays_orders = 0;
+// We define Today's Orders as any order placed today containing at least one item from this seller
+$date_today = date('Y-m-d');
+$sql_today = "SELECT COUNT(DISTINCT o.order_id) 
+              FROM orders o
+              JOIN order_items oi ON o.order_id = oi.order_id
+              JOIN foods f ON oi.food_id = f.id
+              WHERE f.seller_id = ? AND DATE(o.created_at) = ?";
+$stmt = $conn->prepare($sql_today);
+$stmt->bind_param("is", $seller_id, $date_today);
+$stmt->execute();
+$stmt->bind_result($todays_orders);
+$stmt->fetch();
+$stmt->close();
+
+// 3. Pending Orders (Preparing, Out for Delivery - anything not Delivered or Cancelled)
 $pending_orders = 0;
+// Note: Adjust status checks based on exact DB values used. Assuming 'Delivered' and 'Cancelled' are final.
+$sql_pending = "SELECT COUNT(DISTINCT o.order_id) 
+                FROM orders o
+                JOIN order_items oi ON o.order_id = oi.order_id
+                JOIN foods f ON oi.food_id = f.id
+                WHERE f.seller_id = ? AND o.status NOT IN ('Delivered', 'Cancelled', 'Completed')";
+$stmt = $conn->prepare($sql_pending);
+$stmt->bind_param("i", $seller_id);
+$stmt->execute();
+$stmt->bind_result($pending_orders);
+$stmt->fetch();
+$stmt->close();
+
+// 4. Total Earnings
 $total_earnings = 0.00;
+// Sum of total_amount for all non-cancelled orders for this seller.
+// Limitation: If order has items from multiple sellers, total_amount is global. 
+// Ideally we sum (price * quantity) from order_items. Let's do that for accuracy.
+$sql_earnings = "SELECT SUM(oi.price * oi.quantity) 
+                 FROM order_items oi
+                 JOIN foods f ON oi.food_id = f.id
+                 JOIN orders o ON oi.order_id = o.order_id
+                 WHERE f.seller_id = ? AND o.status IN ('Delivered', 'Completed')";
+$stmt = $conn->prepare($sql_earnings);
+$stmt->bind_param("i", $seller_id);
+$stmt->execute();
+$stmt->bind_result($total_earnings);
+$stmt->fetch();
+$stmt->close();
+if($total_earnings === null) $total_earnings = 0.00;
+
 
 // We will refine these queries once we build `seller_orders.php` and know exactly how to link them.
 // For now, let's display the layout.
