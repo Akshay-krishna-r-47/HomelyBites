@@ -4,10 +4,8 @@ header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header("Cache-Control: post-check=0, pre-check=0", false);
 header("Pragma: no-cache");
 
-if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'Customer') {
-    header("Location: login.php");
-    exit();
-}
+include_once 'role_check.php';
+check_role_access('customer');
 include 'db_connect.php';
 include_once 'helpers.php';
 

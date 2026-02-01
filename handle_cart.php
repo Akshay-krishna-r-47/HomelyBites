@@ -15,6 +15,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $food_id = intval($_POST['food_id']);
         $quantity = 1; 
 
+        // Validate Food Item (Ensure not deleted and is available)
+        $valid_check = $conn->prepare("SELECT id FROM foods WHERE id = ? AND is_deleted = 0 AND status = 'Available'");
+        $valid_check->bind_param("i", $food_id);
+        $valid_check->execute();
+        if ($valid_check->get_result()->num_rows === 0) {
+             // Item invalid or deleted
+             header("Location: customer_dashboard.php?error=item_unavailable");
+             exit();
+        }
+        $valid_check->close();
+
         // Check if item already in cart
         $check_sql = "SELECT id, quantity FROM cart WHERE user_id = ? AND food_id = ?";
         $stmt = $conn->prepare($check_sql);

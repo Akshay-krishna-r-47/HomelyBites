@@ -2,6 +2,8 @@
 // Get the current page filename
 $current_page = basename($_SERVER['PHP_SELF']);
 ?>
+<!-- Setup Global Fonts for Sidebar Consistency -->
+<link href="https://fonts.googleapis.com/css2?family=Lemon&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
     /* SIDEBAR STYLES - Centralized */
     :root {

@@ -29,12 +29,13 @@ function handleImageUpload($file) {
 // Handle Form Submission
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     if (isset($_POST['action'])) {
-        $name = trim($_POST['name']);
-        $price = floatval($_POST['price']);
-        $category = trim($_POST['category']);
-        $status = $_POST['status'];
-        
         if ($_POST['action'] == 'add') {
+             $name = trim($_POST['name']);
+             $price = floatval($_POST['price']);
+             $category = trim($_POST['category']);
+             $status = $_POST['status'];
+             
+             // Validation
              // Validation
              if ($price < 0) {
                  $message = "Price cannot be negative.";
@@ -58,6 +59,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         } elseif ($_POST['action'] == 'edit') {
             $food_id = intval($_POST['food_id']);
+            $name = trim($_POST['name']);
+            $price = floatval($_POST['price']);
+            $category = trim($_POST['category']);
+            $status = $_POST['status'];
+            
             
             if ($price < 0) {
                 $message = "Price cannot be negative.";
@@ -92,21 +98,22 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         } elseif ($_POST['action'] == 'delete') {
             $food_id = intval($_POST['food_id_delete']);
-            $stmt = $conn->prepare("DELETE FROM foods WHERE id=? AND seller_id=?");
+            // Soft Delete Implementation
+            $stmt = $conn->prepare("UPDATE foods SET is_deleted = 1 WHERE id=? AND seller_id=?");
             $stmt->bind_param("ii", $food_id, $seller_id);
             if ($stmt->execute()) {
-                 $message = "Item deleted successfully."; $message_type = "success";
+                 $message = "Item removed successfully."; $message_type = "success";
             } else {
-                 $message = "Error deleting item."; $message_type = "error";
+                 $message = "Error removing item."; $message_type = "error";
             }
             $stmt->close();
         }
     }
 }
 
-// Fetch Foods
+// Fetch Foods (Active Only)
 $foods = [];
-$stmt = $conn->prepare("SELECT * FROM foods WHERE seller_id = ? ORDER BY created_at DESC");
+$stmt = $conn->prepare("SELECT * FROM foods WHERE seller_id = ? AND is_deleted = 0 ORDER BY created_at DESC");
 $stmt->bind_param("i", $seller_id);
 $stmt->execute();
 $result = $stmt->get_result();

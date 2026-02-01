@@ -68,6 +68,8 @@ if ($is_delivery_approved) {
     $delivery_link_icon = "fa-solid fa-truck";
 }
 ?>
+<!-- Setup Global Fonts for Sidebar Consistency -->
+<link href="https://fonts.googleapis.com/css2?family=Lemon&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
     /* SIDEBAR STYLES - Centralized */
     :root {

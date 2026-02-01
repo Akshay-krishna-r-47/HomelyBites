@@ -172,7 +172,7 @@ $user_profile_image = getProfileImage($_SESSION['user_id'], $conn);
 
             <div class="food-grid">
                 <?php
-                $rec_sql = "SELECT id, name, price, image, category FROM foods WHERE status = 'Available' ORDER BY id DESC LIMIT 12";
+                $rec_sql = "SELECT id, name, price, image, category FROM foods WHERE status = 'Available' AND is_deleted = 0 ORDER BY id DESC LIMIT 12";
                 if ($stmt = $conn->prepare($rec_sql)) {
                     $stmt->execute();
                     $result = $stmt->get_result();

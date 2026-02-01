@@ -6,11 +6,8 @@ header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header("Cache-Control: post-check=0, pre-check=0", false);
 header("Pragma: no-cache");
 
-// Redirect to login if not logged in as Customer
-if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'Customer') {
-    header("Location: login.php");
-    exit();
-}
+include_once 'role_check.php';
+check_role_access('customer');
 
 include 'db_connect.php';
 // Include helpers via role_check or directly if needed. role_check.php includes helpers.php.
@@ -127,7 +124,7 @@ $user_profile_image = getProfileImage($_SESSION['user_id'], $conn);
                          FROM cart c 
                          JOIN foods f ON c.food_id = f.id 
                          JOIN users u ON f.seller_id = u.user_id 
-                         WHERE c.user_id = ?";
+                         WHERE c.user_id = ? AND f.is_deleted = 0";
             $stmt = $conn->prepare($cart_sql);
             $stmt->bind_param("i", $_SESSION['user_id']);
             $stmt->execute();
