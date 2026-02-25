@@ -127,8 +127,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     </div>
 
                     <div class="form-group" style="margin-bottom: 20px;">
-                        <label for="street" style="display: block; color: #2C3E50; font-weight: 700; margin-bottom: 6px; font-size: 0.9rem;">Street Address</label>
+                        <label for="street" style="display: flex; justify-content: space-between; align-items: center; color: #2C3E50; font-weight: 700; margin-bottom: 6px; font-size: 0.9rem;">
+                            <span>Street Address</span>
+                            <button type="button" id="btn-locate" style="background: none; border: none; color: #3e5a32; font-weight: 700; cursor: pointer; font-size: 0.85rem;"><i class="fa-solid fa-location-crosshairs"></i> Get Location</button>
+                        </label>
                         <input type="text" id="street" name="street" value="<?php echo htmlspecialchars($street); ?>" required style="width: 100%; padding: 12px; border: 1px solid #e0e0e0; border-radius: 8px; background: #fcfcfc; font-size: 0.95rem; outline: none; transition: border 0.3s;">
+                        <div id="location-status" style="font-size: 0.85rem; color: #666; margin-top: 5px; display: none;"></div>
                         <span class="error-feedback" id="streetError">Street address is required</span>
                     </div>
 
@@ -298,6 +302,67 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 return isValid;
             }
         });
+
+        // Location Logic
+        const btnLocate = document.getElementById('btn-locate');
+        if (btnLocate) {
+            btnLocate.addEventListener('click', function() {
+                const statusDiv = document.getElementById('location-status');
+                const streetField = document.getElementById('street');
+                const cityField = document.getElementById('city');
+                const pincodeField = document.getElementById('pincode');
+                
+                statusDiv.style.display = 'block';
+                statusDiv.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Fetching...';
+                
+                if ("geolocation" in navigator) {
+                    navigator.geolocation.getCurrentPosition(function(position) {
+                        const lat = position.coords.latitude;
+                        const lon = position.coords.longitude;
+                        
+                        fetch(`reverse_geocode.php?lat=${lat}&lon=${lon}`)
+                            .then(response => {
+                                if (!response.ok) throw new Error("Network response not ok");
+                                return response.json();
+                            })
+                            .then(data => {
+                                if (data && data.address) {
+                                    const addr = data.address;
+                                    const street = addr.road || addr.suburb || addr.neighbourhood || '';
+                                    const city = addr.city || addr.town || addr.village || addr.county || '';
+                                    const postcode = addr.postcode || '';
+                                    
+                                    if(street) streetField.value = street; else streetField.value = data.display_name;
+                                    if(city) cityField.value = city;
+                                    if(postcode) pincodeField.value = postcode;
+
+                                    statusDiv.innerHTML = '<i class="fa-solid fa-check" style="color: #3e5a32;"></i> Done!';
+                                    setTimeout(() => statusDiv.style.display = 'none', 3000);
+                                    
+                                    ['street', 'city', 'pincode'].forEach(id => {
+                                        const event = new Event('input');
+                                        document.getElementById(id).dispatchEvent(event);
+                                    });
+                                } else {
+                                    statusDiv.innerHTML = '<i class="fa-solid fa-triangle-exclamation" style="color: #e74c3c;"></i> Not found.';
+                                }
+                            })
+                            .catch(error => {
+                                console.error(error);
+                                statusDiv.innerHTML = '<i class="fa-solid fa-triangle-exclamation" style="color: #e74c3c;"></i> Error: ' + error.message;
+                            });
+                    }, function(error) {
+                        statusDiv.innerHTML = '<i class="fa-solid fa-triangle-exclamation" style="color: #e74c3c;"></i> ' + error.message;
+                    }, {
+                        enableHighAccuracy: true,
+                        timeout: 10000,
+                        maximumAge: 0
+                    });
+                } else {
+                    statusDiv.innerHTML = '<i class="fa-solid fa-triangle-exclamation" style="color: #e74c3c;"></i> Not supported.';
+                }
+            });
+        }
     </script>
 </body>
 </html>

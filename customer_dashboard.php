@@ -197,7 +197,6 @@ $user_profile_image = getProfileImage($_SESSION['user_id'], $conn);
                                         <div class="food-cat"><?php echo $f_cat; ?></div>
                                         
                                         <div class="food-footer">
-                                            <div class="food-rating"><i class="fa-solid fa-star"></i> 4.5</div>
                                             <div class="food-price">₹<?php echo $f_price; ?></div>
                                         </div>
                                     </div>

@@ -4,14 +4,13 @@ header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header("Cache-Control: post-check=0, pre-check=0", false);
 header("Pragma: no-cache");
 
-// Redirect if not logged in or not a Customer
-if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'Customer') {
-    // If user is already a Delivery Partner, redirect to dashboard
-    if (isset($_SESSION['role']) && $_SESSION['role'] === 'Delivery') {
-        header("Location: delivery_dashboard.php");
-        exit();
-    }
-    header("Location: login.php");
+// Redirect if not logged in or not a Customer Check handled by role_check
+include_once 'role_check.php';
+check_role_access('customer');
+
+// If user is already a Delivery Partner, redirect to dashboard
+if (isset($_SESSION['delivery_approved']) && $_SESSION['delivery_approved'] == 1) {
+    header("Location: delivery_dashboard.php");
     exit();
 }
 

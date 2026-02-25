@@ -4,10 +4,8 @@ header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
 header("Cache-Control: post-check=0, pre-check=0", false);
 header("Pragma: no-cache");
 
-if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'Customer') {
-    header("Location: login.php");
-    exit();
-}
+include_once 'role_check.php';
+check_role_access('customer');
 include 'db_connect.php';
 include_once 'helpers.php';
 
@@ -318,8 +316,12 @@ $stmt->close();
                         </div>
                         
                         <div class="form-group">
-                            <label>Full Address</label>
-                            <textarea name="address" rows="3" required placeholder="Where will you be cooking from?"><?php echo htmlspecialchars($address_val); ?></textarea>
+                            <label style="display: flex; justify-content: space-between; align-items: center;">
+                                <span>Full Address</span>
+                                <button type="button" id="btn-locate" style="background: none; border: none; color: #0a8f08; font-weight: 600; cursor: pointer; font-size: 0.9rem;"><i class="fa-solid fa-location-crosshairs"></i> Use Current Location</button>
+                            </label>
+                            <textarea name="address" id="address-field" rows="3" required placeholder="Where will you be cooking from?"><?php echo htmlspecialchars($address_val); ?></textarea>
+                            <div id="location-status" style="font-size: 0.85rem; color: #666; margin-top: 5px; display: none;"></div>
                         </div>
                         
                         <div class="grid-2">
@@ -356,6 +358,53 @@ $stmt->close();
         function toggleSidebar() {
             document.querySelector('.sidebar').classList.toggle('collapsed');
         }
+
+        // Location Logic
+        const btnLocate = document.getElementById('btn-locate');
+        if (btnLocate) {
+            btnLocate.addEventListener('click', function() {
+                const statusDiv = document.getElementById('location-status');
+                const addressField = document.getElementById('address-field');
+                
+                statusDiv.style.display = 'block';
+                statusDiv.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Fetching location...';
+                
+                if ("geolocation" in navigator) {
+                    navigator.geolocation.getCurrentPosition(function(position) {
+                        const lat = position.coords.latitude;
+                        const lon = position.coords.longitude;
+                        
+                        fetch(`reverse_geocode.php?lat=${lat}&lon=${lon}`)
+                            .then(response => {
+                                if (!response.ok) throw new Error("Network response not ok");
+                                return response.json();
+                            })
+                            .then(data => {
+                                if (data && data.display_name) {
+                                    addressField.value = data.display_name;
+                                    statusDiv.innerHTML = '<i class="fa-solid fa-check" style="color: #0a8f08;"></i> Location found!';
+                                    setTimeout(() => statusDiv.style.display = 'none', 3000);
+                                } else {
+                                    statusDiv.innerHTML = '<i class="fa-solid fa-triangle-exclamation" style="color: #d32f2f;"></i> Could not determine address.';
+                                }
+                            })
+                            .catch(error => {
+                                console.error(error);
+                                statusDiv.innerHTML = '<i class="fa-solid fa-triangle-exclamation" style="color: #d32f2f;"></i> Error fetching address: ' + error.message;
+                            });
+                    }, function(error) {
+                        statusDiv.innerHTML = '<i class="fa-solid fa-triangle-exclamation" style="color: #d32f2f;"></i> ' + error.message;
+                    }, {
+                        enableHighAccuracy: true,
+                        timeout: 10000,
+                        maximumAge: 0
+                    });
+                } else {
+                    statusDiv.innerHTML = '<i class="fa-solid fa-triangle-exclamation" style="color: #d32f2f;"></i> Geolocation is not supported by your browser.';
+                }
+            });
+        }
+
 
         // Form Validation
         // Real-Time Validation Logic
