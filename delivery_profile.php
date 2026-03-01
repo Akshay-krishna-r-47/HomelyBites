@@ -39,6 +39,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_profile'])) {
         
         try {
             if ($upd_stmt->execute()) {
+                log_activity($conn, $user_id, 'Delivery Profile Updated', 'Delivery partner updated their personal details.');
                 $update_msg = "Profile updated successfully!";
                 $_SESSION['name'] = $new_name; // Update session
                 $user_name = htmlspecialchars($new_name); // Update local var
@@ -77,6 +78,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['change_password'])) {
                  $upd = $conn->prepare("UPDATE users SET password = ? WHERE user_id = ?");
                  $upd->bind_param("si", $new_hash, $user_id);
                  if ($upd->execute()) {
+                     log_activity($conn, $user_id, 'Password Changed', 'Delivery partner changed their password.');
                      $pass_msg = "Password updated successfully!";
                  } else {
                      $pass_err = "Error updating password.";
@@ -175,9 +177,11 @@ if ($stmt2) {
 
         /* Modal Styles */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; display: none; justify-content: center; align-items: center; backdrop-filter: blur(4px); }
-        .modal-content { background: white; width: 90%; max-width: 500px; padding: 40px; border-radius: 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.2); position: relative; }
-        .close-modal { position: absolute; top: 20px; right: 20px; font-size: 1.5rem; cursor: pointer; color: #888; }
-        .form-group { margin-bottom: 20px; }
+        .modal-content { background: white; width: 90%; max-width: 400px; padding: 30px; border-radius: 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.2); position: relative; text-align: center; animation: slideDown 0.3s ease-out; }
+        @keyframes slideDown { from { transform: translateY(-40px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .close-modal { position: absolute; top: 15px; right: 15px; font-size: 1.5rem; cursor: pointer; color: #888; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border-radius: 50%; }
+        .close-modal:hover { background: #f5f5f5; color: #333; }
+        .form-group { margin-bottom: 20px; text-align: left; }
         .form-group label { display: block; margin-bottom: 8px; font-weight: 600; }
         .form-group input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; }
 
@@ -289,6 +293,34 @@ if ($stmt2) {
                     </div>
                 </div>
 
+                <div style="margin-top: 40px; border-top: 1px solid #ffebee; padding-top: 30px;">
+                    <h3 style="color: #d32f2f; font-size: 1.2rem; margin-bottom: 10px;">Danger Zone</h3>
+                    <p style="color: #666; font-size: 0.9rem; margin-bottom: 15px;">Deactivate your delivery partner account.</p>
+                    <button type="button" onclick="showDeactivateModal()" style="background: #fff; color: #d32f2f; border: 1px solid #d32f2f; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s;" onmouseover="this.style.background='#ffebee'" onmouseout="this.style.background='#fff'">
+                        <i class="fa-solid fa-truck-fast"></i> Deactivate Delivery Account
+                    </button>
+                    
+                    <form id="deactivateDeliveryForm" action="account_actions.php" method="POST" style="display: none;">
+                        <input type="hidden" name="action" value="deactivate_delivery">
+                    </form>
+                </div>
+
+                <!-- Custom Deactivate Confirmation Modal -->
+                <div id="deactivateConfirmModal" class="modal-overlay">
+                    <div class="modal-content">
+                        <div style="width: 70px; height: 70px; background: #fff3cd; color: #f39c12; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2rem; margin: 0 auto 20px;">
+                            <i class="fa-solid fa-triangle-exclamation"></i>
+                        </div>
+                        <h3 style="font-size: 1.5rem; color: #333; margin-bottom: 10px; font-weight: 700;">Deactivate Account?</h3>
+                        <p style="color: #666; font-size: 0.95rem; margin-bottom: 25px; line-height: 1.5;">Are you sure you want to deactivate your delivery account? You will lose access to the delivery dashboard, but you will still remain a regular customer.</p>
+                        
+                        <div style="display: flex; gap: 15px; justify-content: center;">
+                            <button type="button" onclick="closeDeactivateModal()" style="padding: 12px 24px; border-radius: 8px; border: 1px solid #ddd; background: #fff; color: #555; font-weight: 600; cursor: pointer; flex: 1; transition: 0.2s;">Cancel</button>
+                            <button type="button" onclick="confirmDeactivateDelivery()" style="padding: 12px 24px; border-radius: 8px; border: none; background: #f39c12; color: white; font-weight: 600; cursor: pointer; flex: 1; box-shadow: 0 4px 12px rgba(243,156,18,0.2); transition: 0.2s;">Deactivate</button>
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </div>
 
@@ -347,8 +379,16 @@ if ($stmt2) {
             openPasswordModal();
         <?php endif; ?>
         
+        // Modal Logic for Deactivate Account
+        const deactivateModal = document.getElementById('deactivateConfirmModal');
+        
+        function showDeactivateModal() { deactivateModal.style.display = 'flex'; }
+        function closeDeactivateModal() { deactivateModal.style.display = 'none'; }
+        function confirmDeactivateDelivery() { document.getElementById('deactivateDeliveryForm').submit(); }
+        
         window.onclick = function(event) {
-            if (event.target == modal) closePasswordModal();
+            if (event.target == modal) { closePasswordModal(); }
+            if (event.target == deactivateModal) { closeDeactivateModal(); }
         }
     </script>
 </body>

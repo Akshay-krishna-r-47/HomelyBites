@@ -15,15 +15,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $food_id = intval($_POST['food_id']);
         $quantity = 1; 
 
-        // Validate Food Item (Ensure not deleted and is available)
-        $valid_check = $conn->prepare("SELECT id FROM foods WHERE id = ? AND is_deleted = 0 AND status = 'Available'");
+        // Validate Food Item and Get Stock
+        $valid_check = $conn->prepare("SELECT id, stock FROM foods WHERE id = ? AND is_deleted = 0 AND status = 'Available'");
         $valid_check->bind_param("i", $food_id);
         $valid_check->execute();
-        if ($valid_check->get_result()->num_rows === 0) {
+        $food_res = $valid_check->get_result();
+        
+        if ($food_res->num_rows === 0) {
              // Item invalid or deleted
              header("Location: customer_dashboard.php?error=item_unavailable");
              exit();
         }
+        
+        $food_data = $food_res->fetch_assoc();
+        $available_stock = (int)$food_data['stock'];
         $valid_check->close();
 
         // Check if item already in cart
@@ -37,11 +42,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             // Update quantity
             $row = $result->fetch_assoc();
             $new_qty = $row['quantity'] + $quantity;
+            
+            // Check Stock limit
+            if ($new_qty > $available_stock) {
+                header("Location: customer_dashboard.php?error=stock_limit");
+                exit();
+            }
+            
             $update_sql = "UPDATE cart SET quantity = ? WHERE id = ?";
             $stmt_up = $conn->prepare($update_sql);
             $stmt_up->bind_param("ii", $new_qty, $row['id']);
             $stmt_up->execute();
         } else {
+            // Check Stock limit
+            if ($quantity > $available_stock) {
+                 header("Location: customer_dashboard.php?error=stock_limit");
+                 exit();
+            }
+            
             // Insert new item
             $insert_sql = "INSERT INTO cart (user_id, food_id, quantity) VALUES (?, ?, ?)";
             $stmt_in = $conn->prepare($insert_sql);
@@ -53,8 +71,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $cart_id = intval($_POST['cart_id']);
         $change = intval($_POST['change']);
         
-        // Get current quantity
-        $stmt = $conn->prepare("SELECT quantity FROM cart WHERE id = ? AND user_id = ?");
+        // Get current quantity and available stock
+        $stmt = $conn->prepare("SELECT c.quantity, c.food_id, f.stock FROM cart c JOIN foods f ON c.food_id = f.id WHERE c.id = ? AND c.user_id = ?");
         $stmt->bind_param("ii", $cart_id, $user_id);
         $stmt->execute();
         $res = $stmt->get_result();
@@ -62,6 +80,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         if ($res->num_rows > 0) {
             $row = $res->fetch_assoc();
             $new_qty = $row['quantity'] + $change;
+            $available_stock = (int)$row['stock'];
             
             if ($new_qty <= 0) {
                 // Remove item if quantity becomes 0 or less
@@ -69,6 +88,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $stmt_del->bind_param("i", $cart_id);
                 $stmt_del->execute();
             } else {
+                // Prevent exceeding stock
+                if ($new_qty > $available_stock) {
+                     $new_qty = $available_stock;
+                     // Optional: Redirect with error, or silently max it out. We'll max it out.
+                }
+                
                 // Update quantity
                 $stmt_up = $conn->prepare("UPDATE cart SET quantity = ? WHERE id = ?");
                 $stmt_up->bind_param("ii", $new_qty, $cart_id);

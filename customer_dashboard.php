@@ -172,7 +172,7 @@ $user_profile_image = getProfileImage($_SESSION['user_id'], $conn);
 
             <div class="food-grid">
                 <?php
-                $rec_sql = "SELECT id, name, price, image, category FROM foods WHERE status = 'Available' AND is_deleted = 0 ORDER BY id DESC LIMIT 12";
+                $rec_sql = "SELECT id, name, price, image, category, stock FROM foods WHERE status = 'Available' AND is_deleted = 0 ORDER BY id DESC LIMIT 12";
                 if ($stmt = $conn->prepare($rec_sql)) {
                     $stmt->execute();
                     $result = $stmt->get_result();
@@ -183,6 +183,7 @@ $user_profile_image = getProfileImage($_SESSION['user_id'], $conn);
                             $f_price = htmlspecialchars($row['price']);
                             $f_image = $row['image'];
                             $f_cat = isset($row['category']) ? htmlspecialchars($row['category']) : 'Delicious';
+                            $f_stock = (int)$row['stock'];
                             
                             // Fallback image logic - Updated to image-coming-soon.png
                             if (empty($f_image) || !file_exists($f_image)) {
@@ -194,7 +195,14 @@ $user_profile_image = getProfileImage($_SESSION['user_id'], $conn);
                                     <img src="<?php echo $f_image; ?>" alt="<?php echo $f_name; ?>" class="food-img">
                                     <div class="food-details">
                                         <div class="food-name"><?php echo $f_name; ?></div>
-                                        <div class="food-cat"><?php echo $f_cat; ?></div>
+                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                                            <div class="food-cat" style="margin-bottom: 0;"><?php echo $f_cat; ?></div>
+                                            <?php if ($f_stock > 0): ?>
+                                                <span style="font-size: 0.75rem; font-weight: 600; color: #0a8f08; background: #e8f5e9; padding: 2px 8px; border-radius: 12px;"><?php echo $f_stock; ?> left</span>
+                                            <?php else: ?>
+                                                <span style="font-size: 0.75rem; font-weight: 600; color: #d32f2f; background: #ffebee; padding: 2px 8px; border-radius: 12px;">Sold Out</span>
+                                            <?php endif; ?>
+                                        </div>
                                         
                                         <div class="food-footer">
                                             <div class="food-price">₹<?php echo $f_price; ?></div>
@@ -202,12 +210,18 @@ $user_profile_image = getProfileImage($_SESSION['user_id'], $conn);
                                     </div>
                                 </a>
                                 <div style="padding: 0 16px 16px 16px;">
-                                    <form action="handle_cart.php" method="POST">
-                                        <input type="hidden" name="food_id" value="<?php echo $row['id']; ?>">
-                                        <button type="submit" name="action" value="add" style="width:100%; padding: 8px; background:white; border:1px solid #0a8f08; color:#0a8f08; border-radius:4px; font-weight:600; cursor:pointer;" onmouseover="this.style.background='#0a8f08'; this.style.color='white';" onmouseout="this.style.background='white'; this.style.color='#0a8f08';">
-                                            ADD TO CART
+                                    <?php if ($f_stock > 0): ?>
+                                        <form action="handle_cart.php" method="POST">
+                                            <input type="hidden" name="food_id" value="<?php echo $row['id']; ?>">
+                                            <button type="submit" name="action" value="add" style="width:100%; padding: 8px; background:white; border:1px solid #0a8f08; color:#0a8f08; border-radius:4px; font-weight:600; cursor:pointer;" onmouseover="this.style.background='#0a8f08'; this.style.color='white';" onmouseout="this.style.background='white'; this.style.color='#0a8f08';">
+                                                ADD TO CART
+                                            </button>
+                                        </form>
+                                    <?php else: ?>
+                                        <button disabled style="width:100%; padding: 8px; background:#f5f5f5; border:1px solid #ddd; color:#999; border-radius:4px; font-weight:600; cursor:not-allowed;">
+                                            OUT OF STOCK
                                         </button>
-                                    </form>
+                                    <?php endif; ?>
                                 </div>
                             </div>
                             <?php

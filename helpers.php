@@ -71,4 +71,23 @@ if (!function_exists('getProfileImage')) {
         return null;
     }
 }
+
+if (!function_exists('log_activity')) {
+    /**
+     * Logs a user activity.
+     * 
+     * @param mysqli $conn
+     * @param int $user_id
+     * @param string $action
+     * @param string $details
+     */
+    function log_activity($conn, $user_id, $action, $details = '') {
+        $stmt = $conn->prepare("INSERT INTO activity_logs (user_id, action, details) VALUES (?, ?, ?)");
+        if ($stmt) {
+            $stmt->bind_param("iss", $user_id, $action, $details);
+            $stmt->execute();
+            $stmt->close();
+        }
+    }
+}
 ?>

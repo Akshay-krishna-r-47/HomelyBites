@@ -34,11 +34,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
              $price = floatval($_POST['price']);
              $category = trim($_POST['category']);
              $status = $_POST['status'];
+             $stock = isset($_POST['stock']) ? intval($_POST['stock']) : 0;
              
-             // Validation
              // Validation
              if ($price < 0) {
                  $message = "Price cannot be negative.";
+                 $message_type = "error";
+             } elseif ($stock < 0) {
+                 $message = "Stock quantity cannot be negative.";
+                 $message_type = "error";
+             } elseif (empty($name) || empty($category)) {
+                 $message = "Name and Category are required.";
                  $message_type = "error";
              } elseif (is_numeric($name)) {
                  $message = "Item name cannot be purely numeric (e.g. '111111'). Please enter a valid name.";
@@ -46,8 +52,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
              } else {
                  $image_path = handleImageUpload($_FILES['image']);
                  
-                 $stmt = $conn->prepare("INSERT INTO foods (seller_id, name, price, category, image, status) VALUES (?, ?, ?, ?, ?, ?)");
-                 $stmt->bind_param("isdsss", $seller_id, $name, $price, $category, $image_path, $status);
+                 $stmt = $conn->prepare("INSERT INTO foods (seller_id, name, price, category, image, status, stock) VALUES (?, ?, ?, ?, ?, ?, ?)");
+                 $stmt->bind_param("isdsssi", $seller_id, $name, $price, $category, $image_path, $status, $stock);
                  
                  if ($stmt->execute()) {
                      $message = "Item added successfully."; $message_type = "success";
@@ -63,11 +69,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $price = floatval($_POST['price']);
             $category = trim($_POST['category']);
             $status = $_POST['status'];
-            
+            $stock = isset($_POST['stock']) ? intval($_POST['stock']) : 0;
             
             if ($price < 0) {
                 $message = "Price cannot be negative.";
                 $message_type = "error";
+            } elseif ($stock < 0) {
+                 $message = "Stock quantity cannot be negative.";
+                 $message_type = "error";
+            } elseif (empty($name) || empty($category)) {
+                 $message = "Name and Category are required.";
+                 $message_type = "error";
             } elseif (is_numeric($name)) {
                 $message = "Item name cannot be purely numeric. Please enter a valid name.";
                 $message_type = "error";
@@ -77,13 +89,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 
                 if ($new_image) {
                     // Delete old image? Optional.
-                    $sql = "UPDATE foods SET name=?, price=?, category=?, status=?, image=? WHERE id=? AND seller_id=?";
+                    $sql = "UPDATE foods SET name=?, price=?, category=?, status=?, image=?, stock=? WHERE id=? AND seller_id=?";
                     $stmt = $conn->prepare($sql);
-                    $stmt->bind_param("sdsssii", $name, $price, $category, $status, $new_image, $food_id, $seller_id);
+                    $stmt->bind_param("sdsssiii", $name, $price, $category, $status, $new_image, $stock, $food_id, $seller_id);
                 } else {
-                    $sql = "UPDATE foods SET name=?, price=?, category=?, status=? WHERE id=? AND seller_id=?";
+                    $sql = "UPDATE foods SET name=?, price=?, category=?, status=?, stock=? WHERE id=? AND seller_id=?";
                     $stmt = $conn->prepare($sql);
-                    $stmt->bind_param("sdssii", $name, $price, $category, $status, $food_id, $seller_id);
+                    $stmt->bind_param("sdssiii", $name, $price, $category, $status, $stock, $food_id, $seller_id);
                 }
 
                 if ($stmt->execute()) {
@@ -226,7 +238,12 @@ $stmt->close();
                         <span><?php echo htmlspecialchars($food['category']); ?></span>
                         <span class="badge badge-<?php echo $food['status']; ?>"><?php echo htmlspecialchars($food['status']); ?></span>
                     </div>
-                    <div class="food-price">₹<?php echo number_format($food['price'], 2); ?></div>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span class="food-price">₹<?php echo number_format($food['price'], 2); ?></span>
+                        <span style="font-size: 0.85rem; color: <?php echo ($food['stock'] > 0) ? '#27ae60' : '#e74c3c'; ?>;">
+                            <i class="fa-solid fa-box"></i> Stock: <?php echo $food['stock']; ?>
+                        </span>
+                    </div>
                 </div>
                 <div class="card-actions">
                     <button class="btn-action" onclick='openEditModal(<?php echo json_encode($food); ?>)'><i class="fa-solid fa-pen"></i></button>
@@ -257,17 +274,26 @@ $stmt->close();
                     <label>Item Name</label>
                     <input type="text" name="name" id="itemName" required>
                 </div>
-                <div class="form-group">
-                    <label>Price (₹)</label>
-                    <input type="number" step="0.01" min="0" name="price" id="itemPrice" required>
+                <div class="form-group" style="display: flex; gap: 15px;">
+                    <div style="flex: 1;">
+                        <label>Price (₹)</label>
+                        <input type="number" step="0.01" min="0" name="price" id="itemPrice" required>
+                    </div>
+                    <div style="flex: 1;">
+                        <label>Stock Qty</label>
+                        <input type="number" min="0" name="stock" id="itemStock" required value="0">
+                    </div>
                 </div>
                 <div class="form-group">
                     <label>Category</label>
                     <select name="category" id="itemCategory" required>
-                        <option value="Main Course">Main Course</option>
+                        <option value="Breakfast">Breakfast</option>
+                        <option value="Lunch">Lunch</option>
+                        <option value="Dinner">Dinner</option>
                         <option value="Snacks">Snacks</option>
                         <option value="Dessert">Dessert</option>
                         <option value="Beverage">Beverage</option>
+                        <option value="Main Course">Main Course</option>
                     </select>
                 </div>
                 <div class="form-group">
@@ -320,6 +346,7 @@ $stmt->close();
                 formAction.value = "add";
                 document.getElementById('itemName').value = "";
                 document.getElementById('itemPrice').value = "";
+                document.getElementById('itemStock').value = "0";
                 document.getElementById('itemCategory').value = "Main Course";
                 document.getElementById('itemStatus').value = "Available";
             }
@@ -333,6 +360,7 @@ $stmt->close();
             
             document.getElementById('itemName').value = food.name;
             document.getElementById('itemPrice').value = food.price;
+            document.getElementById('itemStock').value = food.stock;
             document.getElementById('itemCategory').value = food.category;
             document.getElementById('itemStatus').value = food.status;
         }

@@ -26,6 +26,9 @@ if (isset($_SESSION['user_id']) && isset($_SESSION['role'])) {
 }
 
 $error = "";
+if (isset($_GET['msg']) && $_GET['msg'] === 'account_deleted') {
+    $error = "Your account has been deleted successfully.";
+}
 $email = "";
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
@@ -98,7 +101,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 if (!$is_ajax) $error = $response['message'];
             }
         } else {
-            $response['message'] = "User not found.";
+            // Check if user exists but is deleted
+            $deleted_sql = "SELECT user_id FROM users WHERE email = '$email' AND status = 'Deleted'";
+            $deleted_result = $conn->query($deleted_sql);
+            if ($deleted_result->num_rows > 0) {
+                $response['message'] = "Your account has been deleted.";
+            } else {
+                $response['message'] = "User not found or account inactive.";
+            }
             if (!$is_ajax) $error = $response['message'];
         }
     }

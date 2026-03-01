@@ -67,8 +67,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt_item = $conn->prepare($insert_item);
             
             foreach ($order_data['items'] as $item) {
+                // Insert order item
                 $stmt_item->bind_param("iiid", $order_id, $item['food_id'], $item['quantity'], $item['price']);
                 $stmt_item->execute();
+                
+                // Deduct stock
+                $deduct_sql = "UPDATE foods SET stock = stock - ? WHERE id = ? AND stock >= ?";
+                $stmt_deduct = $conn->prepare($deduct_sql);
+                $stmt_deduct->bind_param("iii", $item['quantity'], $item['food_id'], $item['quantity']);
+                $stmt_deduct->execute();
+                $stmt_deduct->close();
             }
             $stmt_item->close();
         } else {

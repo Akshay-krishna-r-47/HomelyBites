@@ -45,9 +45,12 @@ $stmt->close();
         .btn-view { display: inline-block; padding: 8px 16px; background: var(--primary-color); color: white; border-radius: 6px; text-decoration: none; font-size: 0.9rem; transition: 0.3s; }
         .btn-view:hover { background: #219150; }
         
-        .badge { padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: 600; }
-        .badge-active { background: #d4edda; color: #155724; }
-        .badge-pending { background: #fff3cd; color: #856404; }
+        .status-badge { padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; display: inline-block; text-align: center; min-width: 60px; }
+        .status-badge.badge-active { background-color: #27ae60 !important; color: white !important; }
+        .status-badge.badge-pending { background-color: #f39c12 !important; color: white !important; }
+        .status-badge.badge-deleted { background-color: #ea4335 !important; color: white !important; }
+        .status-badge.badge-inactive { background-color: #95a5a6 !important; color: white !important; }
+        .status-badge.badge-banned { background-color: #333333 !important; color: white !important; }
         
         header { display: flex; justify-content: flex-end; align-items: center; margin-bottom: 30px; }
         .admin-profile { display: flex; align-items: center; gap: 10px; }
@@ -97,11 +100,11 @@ $stmt->close();
                     <td><?php echo htmlspecialchars($user['name']); ?></td>
                     <td>
                         <?php foreach($roles as $role): ?>
-                            <span class="badge" style="background: #eee; color: #333; margin-right: 4px;"><?php echo $role; ?></span>
+                            <span class="status-badge" style="padding: 4px 10px; min-width: 0; border-radius: 12px; background: #eee; color: #333; margin-right: 4px;"><?php echo $role; ?></span>
                         <?php endforeach; ?>
                     </td>
                     <td><?php echo htmlspecialchars($user['email']); ?></td>
-                    <td><span class="badge badge-<?php echo strtolower($user['status'] ?? 'active'); ?>"><?php echo htmlspecialchars($user['status'] ?? 'Active'); ?></span></td>
+                    <td><span class="status-badge badge-<?php echo strtolower($user['status'] ?? 'active'); ?>"><?php echo htmlspecialchars($user['status'] ?? 'Active'); ?></span></td>
                     <td><?php echo date('d M Y', strtotime($user['created_at'])); ?></td>
                     <td>
                         <?php if(in_array('Seller', $roles)): ?>

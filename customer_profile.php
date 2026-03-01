@@ -57,6 +57,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['update_profile'])) {
         
         try {
             if ($upd_stmt->execute()) {
+                log_activity($conn, $user_id, 'Profile Updated', 'User updated their personal details.');
                 $update_msg = "Profile updated successfully!";
                 $_SESSION['name'] = $new_name; // Update session
                 $user_name = htmlspecialchars($new_name); // Update local var
@@ -95,6 +96,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['change_password'])) {
                  $upd = $conn->prepare("UPDATE users SET password = ? WHERE user_id = ?");
                  $upd->bind_param("si", $new_hash, $user_id);
                  if ($upd->execute()) {
+                     log_activity($conn, $user_id, 'Password Changed', 'User changed their password.');
                      $pass_msg = "Password updated successfully!";
                  } else {
                      $pass_err = "Error updating password.";
@@ -128,6 +130,7 @@ if (isset($_POST['delete_photo']) && $_SERVER["REQUEST_METHOD"] == "POST") {
     $update_stmt->bind_param("i", $user_id);
     
     if ($update_stmt->execute()) {
+        log_activity($conn, $user_id, 'Profile Photo Removed', 'User removed their profile photo.');
         $_SESSION['profile_image'] = null; // Update session
         $update_msg = "Profile photo removed successfully.";
         // Refresh values for current page 
@@ -621,6 +624,34 @@ if ($total_spent === null) $total_spent = 0;
                     </div>
                 </form>
 
+                <div style="margin-top: 40px; border-top: 1px solid #ffebee; padding-top: 30px;">
+                    <h3 style="color: #d32f2f; font-size: 1.2rem; margin-bottom: 10px;">Danger Zone</h3>
+                    <p style="color: #666; font-size: 0.9rem; margin-bottom: 15px;">Permanently delete your account and remove all access to your customer, seller, and delivery profiles.</p>
+                    <button type="button" onclick="showDeleteModal()" style="background: #fff; color: #d32f2f; border: 1px solid #d32f2f; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s;" onmouseover="this.style.background='#ffebee'" onmouseout="this.style.background='#fff'">
+                        <i class="fa-solid fa-trash-can"></i> Delete Account
+                    </button>
+                    
+                    <form id="deleteAccountForm" action="account_actions.php" method="POST" style="display: none;">
+                        <input type="hidden" name="action" value="delete_customer">
+                    </form>
+                </div>
+
+                <!-- Custom Delete Confirmation Modal -->
+                <div id="deleteConfirmModal" class="modal-overlay">
+                    <div class="modal-content" style="text-align: center; max-width: 400px; padding: 30px;">
+                        <div style="width: 70px; height: 70px; background: #ffebee; color: #d32f2f; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2rem; margin: 0 auto 20px;">
+                            <i class="fa-solid fa-triangle-exclamation"></i>
+                        </div>
+                        <h3 style="font-size: 1.5rem; color: #333; margin-bottom: 10px; font-weight: 700;">Delete Account?</h3>
+                        <p style="color: #666; font-size: 0.95rem; margin-bottom: 25px; line-height: 1.5;">Are you sure you want to permanently delete your account? This action cannot be undone and you will lose all access to Homely Bites.</p>
+                        
+                        <div style="display: flex; gap: 15px; justify-content: center;">
+                            <button type="button" onclick="closeDeleteModal()" style="padding: 12px 24px; border-radius: 8px; border: 1px solid #ddd; background: #fff; color: #555; font-weight: 600; cursor: pointer; flex: 1; transition: 0.2s;">Cancel</button>
+                            <button type="button" onclick="confirmDeleteAccount()" style="padding: 12px 24px; border-radius: 8px; border: none; background: #d32f2f; color: white; font-weight: 600; cursor: pointer; flex: 1; box-shadow: 0 4px 12px rgba(211,47,47,0.2); transition: 0.2s;">Yes, Delete</button>
+                        </div>
+                    </div>
+                </div>
+
                 <hr style="margin: 40px 0; border: 0; border-top: 1px solid #eee;">
 
                 <!-- Change Password Section -->
@@ -772,6 +803,32 @@ if ($total_spent === null) $total_spent = 0;
                 alert(errorMessage);
             }
         });
+        
+        // Modal Logic for Delete Account
+        const deleteModal = document.getElementById('deleteConfirmModal');
+        
+        function showDeleteModal() {
+            deleteModal.style.display = 'flex';
+        }
+        
+        function closeDeleteModal() {
+            deleteModal.style.display = 'none';
+        }
+        
+        function confirmDeleteAccount() {
+            document.getElementById('deleteAccountForm').submit();
+        }
+        
+        // Ensure clicking outside delete modal closes it
+        window.onclick = function(event) {
+            if (event.target == modal) {
+                closePasswordModal();
+            }
+            if (event.target == deleteModal) {
+                closeDeleteModal();
+            }
+        }
+
         // Real-Time Validation Logic
         const validateInput = (input, errorSpan, validator) => {
             input.addEventListener('input', () => {

@@ -2,6 +2,7 @@
 include 'role_check.php';
 check_role_access('seller');
 include 'db_connect.php';
+include_once 'helpers.php';
 
 $seller_id = $_SESSION['user_id'];
 $message = "";
@@ -18,6 +19,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $stmt->bind_param("ssi", $name, $email, $seller_id);
     
     if ($stmt->execute()) {
+        log_activity($conn, $seller_id, 'Seller Profile Updated', 'Seller updated their store display name or email.');
         $_SESSION['name'] = $name; // Update session
         $message = "Profile updated successfully.";
         $message_type = "success";
@@ -58,6 +60,21 @@ $stmt->close();
         .profile-title h2 { font-weight: 700; font-size: 2rem; margin-bottom: 5px; }
         .profile-title p { color: #888; }
         
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6); z-index: 1000;
+            display: none; justify-content: center; align-items: center;
+            backdrop-filter: blur(4px);
+        }
+        .modal-content {
+            background: white; width: 90%; max-width: 400px;
+            padding: 30px; border-radius: 20px; 
+            box-shadow: 0 20px 50px rgba(0,0,0,0.2);
+            text-align: center; animation: slideDown 0.3s ease-out;
+        }
+        @keyframes slideDown { from { transform: translateY(-40px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
         .form-group { margin-bottom: 25px; }
         .form-group label { display: block; margin-bottom: 8px; font-weight: 700; color: #444; }
         .form-group input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem; outline: none; transition: border-color 0.3s; }
@@ -125,9 +142,52 @@ $stmt->close();
                     
                     <button type="submit" class="btn-save">Save Changes</button>
                 </form>
+
+                <div style="margin-top: 40px; border-top: 1px solid #ffebee; padding-top: 30px;">
+                    <h3 style="color: #d32f2f; font-size: 1.2rem; margin-bottom: 10px;">Danger Zone</h3>
+                    <p style="color: #666; font-size: 0.9rem; margin-bottom: 15px;">Deactivate your seller account. All your food items will be marked as unavailable.</p>
+                    <button type="button" onclick="showDeactivateModal()" style="background: #fff; color: #d32f2f; border: 1px solid #d32f2f; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s;" onmouseover="this.style.background='#ffebee'" onmouseout="this.style.background='#fff'">
+                        <i class="fa-solid fa-store-slash"></i> Deactivate Seller Account
+                    </button>
+                    
+                    <form id="deactivateSellerForm" action="account_actions.php" method="POST" style="display: none;">
+                        <input type="hidden" name="action" value="deactivate_seller">
+                    </form>
+                </div>
+
+                <!-- Custom Deactivate Confirmation Modal -->
+                <div id="deactivateConfirmModal" class="modal-overlay">
+                    <div class="modal-content">
+                        <div style="width: 70px; height: 70px; background: #fff3cd; color: #f39c12; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2rem; margin: 0 auto 20px;">
+                            <i class="fa-solid fa-triangle-exclamation"></i>
+                        </div>
+                        <h3 style="font-size: 1.5rem; color: #333; margin-bottom: 10px; font-weight: 700;">Deactivate Account?</h3>
+                        <p style="color: #666; font-size: 0.95rem; margin-bottom: 25px; line-height: 1.5;">Are you sure you want to deactivate your seller account? Your food items will become unavailable, but you will still remain a regular customer.</p>
+                        
+                        <div style="display: flex; gap: 15px; justify-content: center;">
+                            <button type="button" onclick="closeDeactivateModal()" style="padding: 12px 24px; border-radius: 8px; border: 1px solid #ddd; background: #fff; color: #555; font-weight: 600; cursor: pointer; flex: 1; transition: 0.2s;">Cancel</button>
+                            <button type="button" onclick="confirmDeactivateSeller()" style="padding: 12px 24px; border-radius: 8px; border: none; background: #f39c12; color: white; font-weight: 600; cursor: pointer; flex: 1; box-shadow: 0 4px 12px rgba(243,156,18,0.2); transition: 0.2s;">Deactivate</button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
-    <script>function toggleSidebar(){document.querySelector('.sidebar').classList.toggle('collapsed');}</script>
+    <script>
+        function toggleSidebar(){document.querySelector('.sidebar').classList.toggle('collapsed');}
+        
+        // Modal Logic for Deactivate Account
+        const deactivateModal = document.getElementById('deactivateConfirmModal');
+        
+        function showDeactivateModal() { deactivateModal.style.display = 'flex'; }
+        function closeDeactivateModal() { deactivateModal.style.display = 'none'; }
+        function confirmDeactivateSeller() { document.getElementById('deactivateSellerForm').submit(); }
+        
+        window.onclick = function(event) {
+            if (event.target == deactivateModal) {
+                closeDeactivateModal();
+            }
+        }
+    </script>
 </body>
 </html>

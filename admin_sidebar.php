@@ -196,6 +196,11 @@ $pending_delivery_count = ($del_req_result && $row = $del_req_result->fetch_asso
             </a>
         </li>
         <li>
+            <a href="admin_activity.php" class="<?php echo ($current_page == 'admin_activity.php') ? 'active' : ''; ?>">
+                <i class="fa-solid fa-list-check"></i> <span>Activity Logs</span>
+            </a>
+        </li>
+        <li>
             <a href="admin_requests.php" class="<?php echo ($current_page == 'admin_requests.php') ? 'active' : ''; ?>">
                 <i class="fa-solid fa-store"></i> <span>Seller Requests</span>
                 <?php if ($pending_requests_count > 0): ?>
