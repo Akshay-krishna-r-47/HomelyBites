@@ -135,40 +135,79 @@ $profile_img = getProfileImage($_SESSION['user_id'], $conn);
 
         <div class="content-container">
             
+        <div class="content-container">
+            <?php
+            // Active Orders Count (Accepted or Out for delivery)
+            $active_count = 0;
+            $stmt1 = $conn->prepare("SELECT COUNT(order_id) as c FROM orders WHERE delivery_partner_id = ? AND status IN ('Accepted by Delivery', 'Out for Delivery')");
+            $stmt1->bind_param("i", $_SESSION['user_id']);
+            $stmt1->execute();
+            $res1 = $stmt1->get_result();
+            if ($res1->num_rows > 0) { $active_count = $res1->fetch_assoc()['c']; }
+            
+            // Completed Count
+            $completed_count = 0;
+            $stmt2 = $conn->prepare("SELECT COUNT(order_id) as c FROM orders WHERE delivery_partner_id = ? AND status = 'Delivered'");
+            $stmt2->bind_param("i", $_SESSION['user_id']);
+            $stmt2->execute();
+            $res2 = $stmt2->get_result();
+            if ($res2->num_rows > 0) { $completed_count = $res2->fetch_assoc()['c']; }
+            
+            // Total Earnings
+            $total_earned = 0.00;
+            $stmt3 = $conn->prepare("SELECT SUM(amount) as t FROM delivery_earnings WHERE delivery_partner_id = ?");
+            $stmt3->bind_param("i", $_SESSION['user_id']);
+            $stmt3->execute();
+            $res3 = $stmt3->get_result();
+            if ($res3->num_rows > 0) { 
+                $row3 = $res3->fetch_assoc();
+                if ($row3['t']) { $total_earned = $row3['t']; }
+            }
+            ?>
+            
             <!-- Stats -->
             <div class="stats-grid">
                 <div class="stat-card">
                     <div class="stat-icon"><i class="fa-solid fa-box"></i></div>
                     <div class="stat-info">
-                        <h3>0</h3>
+                        <h3><?php echo $active_count; ?></h3>
                         <p>Active Orders</p>
                     </div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-icon"><i class="fa-solid fa-check-double"></i></div>
                     <div class="stat-info">
-                        <h3>0</h3>
+                        <h3><?php echo $completed_count; ?></h3>
                         <p>Completed</p>
                     </div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-icon"><i class="fa-solid fa-indian-rupee-sign"></i></div>
                     <div class="stat-info">
-                        <h3>0.00</h3>
+                        <h3><?php echo number_format($total_earned, 2); ?></h3>
                         <p>Total Earnings</p>
                     </div>
                 </div>
             </div>
 
-            <!-- Active Orders -->
+            <!-- Active Orders Quick Link -->
             <div class="section-header">
                 <h3 class="section-title">Current Assignments</h3>
             </div>
 
-            <div class="empty-state">
-                <i class="fa-solid fa-bicycle" style="font-size: 3rem; color: #ddd; margin-bottom: 15px;"></i>
-                <p>No active delivery assignments. Check available orders!</p>
-            </div>
+            <?php if ($active_count > 0): ?>
+                <div class="empty-state" style="padding: 40px 20px;">
+                    <i class="fa-solid fa-motorcycle" style="font-size: 3rem; color: var(--brand-green); margin-bottom: 15px;"></i>
+                    <p style="color: #333; font-weight: 600;">You have <?php echo $active_count; ?> active delivery in progress.</p>
+                    <a href="delivery_active.php" style="display: inline-block; margin-top: 15px; padding: 10px 25px; background: var(--brand-green); color: white; text-decoration: none; border-radius: 8px; font-weight: 600;">Track Active Deliveries</a>
+                </div>
+            <?php else: ?>
+                <div class="empty-state">
+                    <i class="fa-solid fa-bicycle" style="font-size: 3rem; color: #ddd; margin-bottom: 15px;"></i>
+                    <p>No active delivery assignments. Check available orders!</p>
+                    <a href="delivery_orders.php" style="display: inline-block; margin-top: 15px; padding: 10px 25px; background: #3b82f6; color: white; text-decoration: none; border-radius: 8px; font-weight: 600;">Find Orders</a>
+                </div>
+            <?php endif; ?>
 
         </div>
     </div>
