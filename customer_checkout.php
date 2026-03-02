@@ -41,6 +41,8 @@ if (empty($cart_items)) {
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         :root { --primary-color: #fc8019; --brand-green: #0a8f08; --bg-body: #f8f8f8; --text-dark: #222; }
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
@@ -77,6 +79,9 @@ if (empty($cart_items)) {
                         </label>
                         <textarea name="address" id="address-field" rows="3" required placeholder="Enter your full address"></textarea>
                         <div id="location-status" style="font-size: 0.85rem; color: #666; margin-top: 5px; display: none;"></div>
+                        <div id="map" style="height: 250px; border-radius: 8px; margin-top: 15px; border: 1px solid #ddd; z-index: 1;"></div>
+                        <input type="hidden" name="latitude" id="latitude">
+                        <input type="hidden" name="longitude" id="longitude">
                     </div>
                     <div class="form-group">
                         <label>Payment Method</label>
@@ -114,15 +119,73 @@ if (empty($cart_items)) {
             </div>
         </div>
     </div>
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
         function toggleSidebar(){ document.querySelector('.sidebar').classList.toggle('collapsed'); }
+
+        // Initialize Map
+        const defaultLat = 20.5937;
+        const defaultLng = 78.9629;
+        
+        const map = L.map('map').setView([defaultLat, defaultLng], 4);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        let marker;
+
+        function setMapLocation(lat, lng, addressString = '') {
+            if (marker) {
+                marker.setLatLng([lat, lng]);
+            } else {
+                marker = L.marker([lat, lng]).addTo(map);
+            }
+            map.setView([lat, lng], 15);
+            
+            document.getElementById('latitude').value = lat;
+            document.getElementById('longitude').value = lng;
+            
+            if (addressString) {
+                document.getElementById('address-field').value = addressString;
+            }
+        }
+
+        // Map Click Event
+        map.on('click', function(e) {
+            const lat = e.latlng.lat;
+            const lng = e.latlng.lng;
+            
+            const statusDiv = document.getElementById('location-status');
+            statusDiv.style.display = 'block';
+            statusDiv.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Fetching address for selected location...';
+            
+            setMapLocation(lat, lng);
+            
+            fetch(`reverse_geocode.php?lat=${lat}&lon=${lng}`)
+                .then(response => {
+                    if (!response.ok) throw new Error("Network response not ok");
+                    return response.json();
+                })
+                .then(data => {
+                    if (data && data.display_name) {
+                        document.getElementById('address-field').value = data.display_name;
+                        statusDiv.innerHTML = '<i class="fa-solid fa-check" style="color: #0a8f08;"></i> Address updated from map!';
+                        setTimeout(() => statusDiv.style.display = 'none', 3000);
+                    } else {
+                        statusDiv.innerHTML = '<i class="fa-solid fa-triangle-exclamation" style="color: #d32f2f;"></i> Could not determine address.';
+                    }
+                })
+                .catch(error => {
+                    statusDiv.innerHTML = '<i class="fa-solid fa-triangle-exclamation" style="color: #d32f2f;"></i> Error fetching address.';
+                });
+        });
 
         // Location Logic
         const btnLocate = document.getElementById('btn-locate');
         if (btnLocate) {
             btnLocate.addEventListener('click', function() {
                 const statusDiv = document.getElementById('location-status');
-                const addressField = document.getElementById('address-field');
                 
                 statusDiv.style.display = 'block';
                 statusDiv.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Fetching location...';
@@ -132,6 +195,8 @@ if (empty($cart_items)) {
                         const lat = position.coords.latitude;
                         const lon = position.coords.longitude;
                         
+                        setMapLocation(lat, lon);
+                        
                         fetch(`reverse_geocode.php?lat=${lat}&lon=${lon}`)
                             .then(response => {
                                 if (!response.ok) throw new Error("Network response not ok");
@@ -139,7 +204,7 @@ if (empty($cart_items)) {
                             })
                             .then(data => {
                                 if (data && data.display_name) {
-                                    addressField.value = data.display_name;
+                                    document.getElementById('address-field').value = data.display_name;
                                     statusDiv.innerHTML = '<i class="fa-solid fa-check" style="color: #0a8f08;"></i> Location found!';
                                     setTimeout(() => statusDiv.style.display = 'none', 3000);
                                 } else {

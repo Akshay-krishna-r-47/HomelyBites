@@ -44,7 +44,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_status'])) {
 
 // Fetch Currently Active Orders for this driver
 $active_orders = [];
-$sql = "SELECT o.order_id, o.status, o.total_amount, o.address as dropoff_address, o.created_at, 
+$sql = "SELECT o.order_id, o.status, o.total_amount, o.address as dropoff_address, o.latitude, o.longitude, o.created_at, 
                s.name as seller_name, CONCAT(s.street, ', ', s.city, ' - ', s.pincode) as pickup_address, s.phone as seller_phone,
                c.name as customer_name, c.phone as customer_phone
         FROM orders o 
@@ -149,7 +149,12 @@ while ($row = $result->fetch_assoc()) {
                             <h4><i class="fa-solid fa-house" style="color: #f97316;"></i> Deliver To Customer</h4>
                             <div class="person-name"><?php echo htmlspecialchars($order['customer_name']); ?></div>
                             <div class="address"><?php echo htmlspecialchars($order['dropoff_address']); ?></div>
-                            <a href="tel:<?php echo htmlspecialchars($order['customer_phone']); ?>" class="call-btn"><i class="fa-solid fa-phone"></i> Call Customer</a>
+                            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                                <a href="tel:<?php echo htmlspecialchars($order['customer_phone']); ?>" class="call-btn"><i class="fa-solid fa-phone"></i> Call</a>
+                                <?php if (!empty($order['latitude']) && !empty($order['longitude'])): ?>
+                                <a href="https://www.google.com/maps/dir/?api=1&destination=<?php echo urlencode($order['latitude'] . ',' . $order['longitude']); ?>" target="_blank" class="call-btn" style="color: #0a8f08; border-color: #bbf7d0;"><i class="fa-solid fa-map-location-dot"></i> Navigate</a>
+                                <?php endif; ?>
+                            </div>
                         </div>
                     </div>
                     

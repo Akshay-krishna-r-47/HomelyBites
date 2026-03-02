@@ -42,7 +42,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
 // Fetch Available Orders
 $available_orders = [];
-$sql = "SELECT o.order_id, o.total_amount, o.address as dropoff_address, o.created_at, 
+$sql = "SELECT o.order_id, o.total_amount, o.address as dropoff_address, o.latitude, o.longitude, o.created_at, 
                s.name as seller_name, CONCAT(s.street, ', ', s.city, ' - ', s.pincode) as pickup_address, s.phone as seller_phone
         FROM orders o 
         JOIN users s ON o.seller_id = s.user_id 
@@ -155,6 +155,13 @@ if ($result) {
                         <div class="loc-details">
                             <h4>Deliver To</h4>
                             <p><?php echo htmlspecialchars($order['dropoff_address']); ?></p>
+                            <?php if (!empty($order['latitude']) && !empty($order['longitude'])): ?>
+                            <div class="sub-text" style="margin-top: 8px;">
+                                <a href="https://www.google.com/maps/dir/?api=1&destination=<?php echo urlencode($order['latitude'] . ',' . $order['longitude']); ?>" target="_blank" style="color: #0a8f08; text-decoration: none; font-weight: 500; font-size: 0.9rem; border: 1px solid #bbf7d0; padding: 4px 10px; border-radius: 4px; display: inline-block;">
+                                    <i class="fa-solid fa-map-location-dot"></i> View on Map
+                                </a>
+                            </div>
+                            <?php endif; ?>
                         </div>
                     </div>
                     
