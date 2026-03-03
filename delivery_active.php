@@ -35,6 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_status'])) {
                 $stmt_earn = $conn->prepare($earn_sql);
                 $stmt_earn->bind_param("iid", $delivery_id, $order_id, $flat_fee);
                 $stmt_earn->execute();
+                $stmt_earn->execute();
             }
             $message = "Order status updated to " . htmlspecialchars($new_status) . "!";
             $message_type = "success";
@@ -50,7 +51,7 @@ $sql = "SELECT o.order_id, o.status, o.total_amount, o.address as dropoff_addres
         FROM orders o 
         JOIN users s ON o.seller_id = s.user_id 
         JOIN users c ON o.user_id = c.user_id
-        WHERE o.delivery_partner_id = ? AND o.status IN ('Accepted by Delivery', 'Out for Delivery')
+        WHERE o.delivery_partner_id = ? AND o.status IN ('Accepted by Delivery', 'Arrived at Restaurant', 'Out for Delivery')
         ORDER BY o.created_at DESC";
 $stmt = $conn->prepare($sql);
 $stmt->bind_param("i", $delivery_id);
@@ -140,17 +141,21 @@ while ($row = $result->fetch_assoc()) {
                         <div class="contact-box">
                             <h4><i class="fa-solid fa-store" style="color: #3b82f6;"></i> Pickup From Seller</h4>
                             <div class="person-name"><?php echo htmlspecialchars($order['seller_name']); ?></div>
-                            <div class="address"><?php echo htmlspecialchars($order['pickup_address']); ?></div>
-                            <a href="tel:<?php echo htmlspecialchars($order['seller_phone']); ?>" class="call-btn"><i class="fa-solid fa-phone"></i> Call Seller</a>
+                            <div class="address" title="<?php echo htmlspecialchars($order['pickup_address']); ?>"><?php echo htmlspecialchars($order['pickup_address']); ?></div>
+                            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                                <a href="tel:<?php echo htmlspecialchars($order['seller_phone']); ?>" class="call-btn"><i class="fa-solid fa-phone"></i> Call Seller</a>
+                                <button type="button" class="call-btn" onclick="copyToClipboard('<?php echo htmlspecialchars($order['seller_phone']); ?>')" style="cursor: pointer; background: #f8fafc; color: #475569; border: 1px solid #cbd5e1;"><i class="fa-regular fa-copy"></i> Copy</button>
+                            </div>
                         </div>
                         
                         <!-- Dropoff Details -->
                         <div class="contact-box">
                             <h4><i class="fa-solid fa-house" style="color: #f97316;"></i> Deliver To Customer</h4>
                             <div class="person-name"><?php echo htmlspecialchars($order['customer_name']); ?></div>
-                            <div class="address"><?php echo htmlspecialchars($order['dropoff_address']); ?></div>
+                            <div class="address" title="<?php echo htmlspecialchars($order['dropoff_address']); ?>"><?php echo htmlspecialchars($order['dropoff_address']); ?></div>
                             <div style="display: flex; gap: 10px; flex-wrap: wrap;">
                                 <a href="tel:<?php echo htmlspecialchars($order['customer_phone']); ?>" class="call-btn"><i class="fa-solid fa-phone"></i> Call</a>
+                                <button type="button" class="call-btn" onclick="copyToClipboard('<?php echo htmlspecialchars($order['customer_phone']); ?>')" style="cursor: pointer; background: #f8fafc; color: #475569; border: 1px solid #cbd5e1;"><i class="fa-regular fa-copy"></i> Copy</button>
                                 <?php if (!empty($order['latitude']) && !empty($order['longitude'])): ?>
                                 <a href="https://www.google.com/maps/dir/?api=1&destination=<?php echo urlencode($order['latitude'] . ',' . $order['longitude']); ?>" target="_blank" class="call-btn" style="color: #0a8f08; border-color: #bbf7d0;"><i class="fa-solid fa-map-location-dot"></i> Navigate</a>
                                 <?php endif; ?>
@@ -162,6 +167,8 @@ while ($row = $result->fetch_assoc()) {
                         <form method="POST">
                             <input type="hidden" name="order_id" value="<?php echo $order['order_id']; ?>">
                             <?php if ($order['status'] === 'Accepted by Delivery'): ?>
+                                <button type="submit" name="update_status" value="Arrived at Restaurant" class="btn btn-pickup" style="background: #8e44ad; box-shadow: 0 4px 10px rgba(142, 68, 173, 0.3);"><i class="fa-solid fa-location-dot" style="margin-right: 8px;"></i> Arrived at Restaurant</button>
+                            <?php elseif ($order['status'] === 'Arrived at Restaurant'): ?>
                                 <button type="submit" name="update_status" value="Out for Delivery" class="btn btn-pickup"><i class="fa-solid fa-box-open" style="margin-right: 8px;"></i> Mark as Picked Up</button>
                             <?php elseif ($order['status'] === 'Out for Delivery'): ?>
                                 <button type="submit" name="update_status" value="Delivered" class="btn btn-deliver"><i class="fa-solid fa-check-double" style="margin-right: 8px;"></i> Mark as Delivered</button>
@@ -184,6 +191,40 @@ while ($row = $result->fetch_assoc()) {
 
     <script>
         function toggleSidebar() { document.querySelector('.sidebar').classList.toggle('collapsed'); }
+        
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                showToast('Phone number copied: ' + text);
+            }).catch(err => {
+                console.error('Failed to copy: ', err);
+            });
+        }
+
+        function showToast(message) {
+            let toast = document.createElement('div');
+            toast.textContent = message;
+            toast.style.position = 'fixed';
+            toast.style.bottom = '20px';
+            toast.style.right = '20px';
+            toast.style.backgroundColor = '#4caf50';
+            toast.style.color = '#fff';
+            toast.style.padding = '12px 24px';
+            toast.style.borderRadius = '8px';
+            toast.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1)';
+            toast.style.fontFamily = 'Arial, sans-serif';
+            toast.style.fontSize = '14px';
+            toast.style.zIndex = '9999';
+            toast.style.opacity = '0';
+            toast.style.transition = 'opacity 0.3s ease-in-out';
+            document.body.appendChild(toast);
+            
+            setTimeout(() => { toast.style.opacity = '1'; }, 10);
+            
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
     </script>
 </body>
 </html>

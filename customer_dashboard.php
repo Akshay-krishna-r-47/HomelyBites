@@ -115,6 +115,44 @@ $user_profile_image = getProfileImage($_SESSION['user_id'], $conn);
         .btn-add { border: 1px solid #d4d5d9; color: #1ba672; background: white; padding: 6px 20px; border-radius: 4px; font-weight: 600; font-size: 13px; text-transform: uppercase; box-shadow: 0 1px 3px rgba(0,0,0,0.1); transition: all 0.2s; position: absolute; bottom: 16px; right: 16px; }
         .btn-add:hover { box-shadow: 0 2px 6px rgba(0,0,0,0.15); background: #f9f9f9; }
 
+        /* Category Filters */
+        .category-filters {
+            display: flex;
+            gap: 12px;
+            overflow-x: auto;
+            padding-bottom: 12px;
+            margin-bottom: 24px;
+            -ms-overflow-style: none; /* IE and Edge */
+            scrollbar-width: none; /* Firefox */
+        }
+        .category-filters::-webkit-scrollbar {
+            display: none;
+        }
+        .category-pill {
+            padding: 8px 20px;
+            background: #fff;
+            border: 1px solid #e0e0e0;
+            border-radius: 24px;
+            font-size: 14px;
+            font-weight: 500;
+            color: #555;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .category-pill:hover {
+            border-color: var(--brand-green);
+            color: var(--brand-green);
+            background: #f0fdf4;
+        }
+        .category-pill.active {
+            background: var(--brand-green);
+            color: #fff;
+            border-color: var(--brand-green);
+        }
+
         /* Empty State */
         .empty-state { text-align: center; padding: 60px 20px; width: 100%; grid-column: 1 / -1; }
         .empty-state img { width: 180px; margin-bottom: 20px; opacity: 0.8; }
@@ -164,16 +202,56 @@ $user_profile_image = getProfileImage($_SESSION['user_id'], $conn);
                 <p class="welcome-sub">Order your favorite food from local chefs</p>
             </div>
 
-            <!-- Recommended Section -->
+            <?php
+            // Fetch available categories dynamically
+            $cat_sql = "SELECT DISTINCT category FROM foods WHERE status = 'Available' AND is_deleted = 0 AND category IS NOT NULL AND category != '' ORDER BY category ASC";
+            $categories = [];
+            if ($cat_stmt = $conn->prepare($cat_sql)) {
+                $cat_stmt->execute();
+                $cat_res = $cat_stmt->get_result();
+                while ($c = $cat_res->fetch_assoc()) {
+                    $categories[] = $c['category'];
+                }
+                $cat_stmt->close();
+            }
+
+            $selected_category = isset($_GET['category']) ? $_GET['category'] : 'all';
+            ?>
+
+            <!-- Recommended Section based on category -->
             <div class="section-header">
-                <h2 class="section-title">Recommended to you</h2>
-                <a href="#" class="view-all">View All <i class="fa-solid fa-arrow-right"></i></a>
+                <h2 class="section-title"><?php echo $selected_category === 'all' ? 'Recommended to you' : htmlspecialchars($selected_category) . ' Items'; ?></h2>
+                <?php if ($selected_category === 'all'): ?>
+                    <a href="#" class="view-all">View All <i class="fa-solid fa-arrow-right"></i></a>
+                <?php endif; ?>
             </div>
+
+            <!-- Categories -->
+            <?php if (!empty($categories)): ?>
+            <div class="category-filters">
+                <a href="customer_dashboard.php?category=all" class="category-pill <?php echo $selected_category === 'all' ? 'active' : ''; ?>">All</a>
+                <?php foreach($categories as $cat): ?>
+                    <a href="customer_dashboard.php?category=<?php echo urlencode($cat); ?>" class="category-pill <?php echo $selected_category === $cat ? 'active' : ''; ?>">
+                        <?php echo htmlspecialchars($cat); ?>
+                    </a>
+                <?php endforeach; ?>
+            </div>
+            <?php endif; ?>
 
             <div class="food-grid">
                 <?php
-                $rec_sql = "SELECT id, name, price, image, category, stock FROM foods WHERE status = 'Available' AND is_deleted = 0 ORDER BY id DESC LIMIT 12";
-                if ($stmt = $conn->prepare($rec_sql)) {
+                if ($selected_category !== 'all') {
+                    $rec_sql = "SELECT id, name, price, image, category, stock FROM foods WHERE status = 'Available' AND is_deleted = 0 AND category = ? ORDER BY id DESC LIMIT 50";
+                    $stmt = $conn->prepare($rec_sql);
+                    if ($stmt) {
+                        $stmt->bind_param("s", $selected_category);
+                    }
+                } else {
+                    $rec_sql = "SELECT id, name, price, image, category, stock FROM foods WHERE status = 'Available' AND is_deleted = 0 ORDER BY id DESC LIMIT 12";
+                    $stmt = $conn->prepare($rec_sql);
+                }
+
+                if ($stmt) {
                     $stmt->execute();
                     $result = $stmt->get_result();
                     

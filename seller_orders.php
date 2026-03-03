@@ -28,8 +28,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['order_id']) && isset($
         $update_stmt = $conn->prepare("UPDATE orders SET status = ? WHERE order_id = ?");
         $update_stmt->bind_param("si", $new_status, $order_id);
         if ($update_stmt->execute()) {
-            // Success
             $update_stmt->close();
+            
+            // If the seller just marked it Ready for Pickup, trigger Zomato driver assignment
+            if ($new_status === 'Ready for Pickup') {
+                include_once 'api_assign_driver.php';
+                triggerDriverAssignment($conn, $order_id);
+            }
+            
             // Redirect to avoid resubmission
             header("Location: seller_orders.php?msg=updated");
             exit();
@@ -52,6 +58,7 @@ $sql = "
         o.status, 
         o.total_amount, 
         u.name as customer_name,
+        u.phone as customer_phone,
         GROUP_CONCAT(CONCAT(f.name, ' (x', oi.quantity, ')') SEPARATOR ', ') as items_summary
     FROM orders o
     JOIN users u ON o.user_id = u.user_id
@@ -154,8 +161,14 @@ $stmt->close();
                             <div class="order-id">Order #HB-<?php echo 1000 + $order['order_id']; ?></div>
                             <div class="order-date"><i class="fa-regular fa-clock"></i> <?php echo date('M d, Y h:i A', strtotime($order['created_at'])); ?></div>
                         </div>
-                        <div style="text-align: right;">
+                        <div style="text-align: right; display:flex; flex-direction:column; align-items:flex-end; gap:5px;">
                             <div class="customer-info"><i class="fa-solid fa-user"></i> <?php echo htmlspecialchars($order['customer_name']); ?></div>
+                            <?php if(!empty($order['customer_phone'])): ?>
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <a href="tel:<?php echo htmlspecialchars($order['customer_phone']); ?>" class="call-btn" style="text-decoration:none; padding:4px 10px; border-radius:4px; font-size:0.85rem; background:#eff6ff; color:#3b82f6; border:1px solid #bfdbfe;"><i class="fa-solid fa-phone"></i> Call</a>
+                                    <button type="button" onclick="copyToClipboard('<?php echo htmlspecialchars($order['customer_phone']); ?>')" style="cursor: pointer; padding:4px 10px; border-radius:4px; font-size:0.85rem; background: #f8fafc; color: #475569; border: 1px solid #cbd5e1;"><i class="fa-regular fa-copy"></i> Copy</button>
+                                </div>
+                            <?php endif; ?>
                         </div>
                     </div>
                     
@@ -180,6 +193,7 @@ $stmt->close();
                                 <input type="hidden" name="order_id" value="<?php echo $order['order_id']; ?>">
                                 <select name="status" class="status-select">
                                     <option value="Preparing" <?php if($order['status']=='Preparing') echo 'selected'; ?>>Preparing</option>
+                                    <option value="Ready for Pickup" <?php if($order['status']=='Ready for Pickup') echo 'selected'; ?>>Ready for Pickup</option>
                                     <option value="Out for Delivery" <?php if($order['status']=='Out for Delivery') echo 'selected'; ?>>Out for Delivery</option>
                                     <option value="Delivered" <?php if($order['status']=='Delivered') echo 'selected'; ?>>Delivered</option>
                                     <option value="Cancelled" <?php if($order['status']=='Cancelled') echo 'selected'; ?>>Cancelled</option>
@@ -195,6 +209,16 @@ $stmt->close();
             <?php endif; ?>
         </div>
     </div>
-    <script>function toggleSidebar(){document.querySelector('.sidebar').classList.toggle('collapsed');}</script>
+    <script>
+        function toggleSidebar(){document.querySelector('.sidebar').classList.toggle('collapsed');}
+        
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                alert('Phone number copied: ' + text);
+            }).catch(err => {
+                console.error('Failed to copy: ', err);
+            });
+        }
+    </script>
 </body>
 </html>

@@ -13,9 +13,19 @@ if (!isset($_SESSION['user_id']) || !isset($_SESSION['delivery_approved']) || $_
 include 'db_connect.php';
 $formatted_name = formatName($_SESSION['name']);
 $user_name = htmlspecialchars($formatted_name);
-$user_name = htmlspecialchars($formatted_name);
 $user_initials = getAvatarInitials($formatted_name);
 $profile_img = getProfileImage($_SESSION['user_id'], $conn);
+
+// Get current online status
+$is_online = 0;
+$stmt_online = $conn->prepare("SELECT is_online FROM users WHERE user_id = ?");
+$stmt_online->bind_param("i", $_SESSION['user_id']);
+$stmt_online->execute();
+$res_online = $stmt_online->get_result();
+if ($res_online->num_rows > 0) {
+    $is_online = $res_online->fetch_assoc()['is_online'];
+}
+$stmt_online->close();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -102,6 +112,74 @@ $profile_img = getProfileImage($_SESSION['user_id'], $conn);
         .empty-state { text-align: center; padding: 60px 20px; background: white; border-radius: 16px; box-shadow: var(--shadow-card); }
         .empty-state p { font-size: 1.1rem; color: #888; margin-top: 15px; }
 
+        /* Online/Offline Toggle */
+        .status-toggle {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: #fff;
+            padding: 8px 16px;
+            border-radius: 30px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            border: 1px solid #eee;
+        }
+        .status-text {
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: #555;
+        }
+        .status-text.online { color: #27ae60; }
+        .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 24px; }
+        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: var(--brand-green); }
+        input:checked + .slider:before { transform: translateX(20px); }
+
+        /* Full Screen Pop-Up */
+        .order-popup-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            z-index: 9999;
+            display: none; /* hidden by default */
+            align-items: center; justify-content: center;
+            backdrop-filter: blur(5px);
+        }
+        .order-popup-card {
+            background: white;
+            border-radius: 20px;
+            width: 90%; max-width: 400px;
+            padding: 30px;
+            text-align: center;
+            animation: popIn 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+        }
+        @keyframes popIn { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        
+        .timer-ring {
+            width: 100px; height: 100px;
+            border-radius: 50%;
+            border: 6px solid #e0e0e0;
+            border-top-color: var(--brand-green);
+            margin: 0 auto 20px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 2rem; font-weight: 700; color: #333;
+            animation: spinTimer 20s linear forwards;
+        }
+        @keyframes spinTimer { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .timer-text { position: absolute; animation: counterSpin 20s linear forwards; }
+        @keyframes counterSpin { 0% { transform: rotate(0deg); } 100% { transform: rotate(-360deg); } }
+
+        .popup-title { font-size: 1.4rem; font-weight: 700; color: #333; margin-bottom: 10px; }
+        .popup-details { text-align: left; background: #f9f9f9; padding: 15px; border-radius: 12px; margin-bottom: 25px; }
+        .popup-details p { font-size: 0.95rem; margin-bottom: 8px; font-weight: 500; color: #555; }
+        
+        .popup-actions { display: flex; gap: 15px; }
+        .btn-reject { flex: 1; padding: 14px; background: #fff; border: 2px solid #ddd; border-radius: 10px; font-weight: 600; color: #555; cursor: pointer; transition: 0.2s; }
+        .btn-reject:hover { background: #fee2e2; border-color: #ef4444; color: #dc2626; }
+        .btn-accept { flex: 2; padding: 14px; background: var(--brand-green); border: none; border-radius: 10px; font-weight: 700; color: #fff; cursor: pointer; box-shadow: 0 4px 12px rgba(0, 128, 0, 0.3); font-size: 1.1rem; transition: 0.2s; }
+        .btn-accept:hover { background: #006600; transform: translateY(-2px); }
+
     </style>
 </head>
 <body>
@@ -111,9 +189,19 @@ $profile_img = getProfileImage($_SESSION['user_id'], $conn);
     <div class="main-content">
         <!-- Header -->
         <header>
-            <div class="header-title">
-                <h2>Overview</h2>
-                <span>Welcome back, Delivery Partner!</span>
+            <div class="header-title" style="display: flex; gap: 30px; align-items: center;">
+                <div>
+                    <h2>Overview</h2>
+                    <span>Welcome back, Delivery Partner!</span>
+                </div>
+                
+                <div class="status-toggle">
+                    <span class="status-text <?php echo $is_online ? 'online' : ''; ?>" id="statusLabel"><?php echo $is_online ? 'Online' : 'Offline'; ?></span>
+                    <label class="switch">
+                        <input type="checkbox" id="onlineToggle" <?php echo $is_online ? 'checked' : ''; ?>>
+                        <span class="slider"></span>
+                    </label>
+                </div>
             </div>
 
             <div class="user-info">
@@ -212,10 +300,175 @@ $profile_img = getProfileImage($_SESSION['user_id'], $conn);
         </div>
     </div>
 
+        </div>
+    </div>
+
+    <!-- NEW ORDER POPUP -->
+    <div class="order-popup-overlay" id="orderPopup">
+        <div class="order-popup-card">
+            <h3 style="color: #27ae60; font-size: 1.1rem; font-weight: 700; text-transform: uppercase; margin-bottom: 20px; letter-spacing: 1px;"><i class="fa-solid fa-bell fa-shake"></i> New Delivery Request</h3>
+            
+            <div class="timer-ring">
+                <div class="timer-text" id="popupTimer">20</div>
+            </div>
+            
+            <div class="popup-title" id="popValAmount">₹0.00</div>
+            
+            <div class="popup-details">
+                <p><i class="fa-solid fa-store" style="color: #3b82f6; width: 20px;"></i> <b>Pickup:</b> <span id="popValPickup">...</span></p>
+                <p><i class="fa-solid fa-house" style="color: #f97316; width: 20px;"></i> <b>Dropoff:</b> <span id="popValDropoff">...</span></p>
+            </div>
+            
+            <div class="popup-actions">
+                <button class="btn-reject" onclick="handleRequest('reject')">Reject</button>
+                <button class="btn-accept" id="btnAccept" onclick="handleRequest('accept')">Accept Order</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         function toggleSidebar() {
             document.querySelector('.sidebar').classList.toggle('collapsed');
         }
+
+        let isOnline = <?php echo $is_online ? 'true' : 'false'; ?>;
+        const toggleBtn = document.getElementById('onlineToggle');
+        const statusLabel = document.getElementById('statusLabel');
+
+        // Location Tracking Variables
+        let currentLat = null;
+        let currentLng = null;
+        let watchId = null;
+
+        // Toggle Status Logic
+        toggleBtn.addEventListener('change', function() {
+            isOnline = this.checked;
+            statusLabel.textContent = isOnline ? 'Online' : 'Offline';
+            if(isOnline) {
+                statusLabel.classList.add('online');
+                startLocationTracking();
+            } else {
+                statusLabel.classList.remove('online');
+                stopLocationTracking();
+                updateServerStatus(0, null, null);
+            }
+        });
+
+        function startLocationTracking() {
+            if ("geolocation" in navigator) {
+                watchId = navigator.geolocation.watchPosition(
+                    (position) => {
+                        currentLat = position.coords.latitude;
+                        currentLng = position.coords.longitude;
+                        updateServerStatus(1, currentLat, currentLng);
+                    },
+                    (error) => {
+                        console.error("Location error:", error);
+                        // Fallback to update online status without GPS
+                        updateServerStatus(1, null, null);
+                    },
+                    { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 }
+                );
+            } else {
+                updateServerStatus(1, null, null);
+            }
+        }
+
+        function stopLocationTracking() {
+            if (watchId !== null) {
+                navigator.geolocation.clearWatch(watchId);
+                watchId = null;
+            }
+        }
+
+        function updateServerStatus(status, lat, lng) {
+            fetch('api_delivery_status.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: status, lat: lat, lng: lng })
+            }).catch(e => console.error(e));
+        }
+
+        // Initialize tracking if already online from previous session
+        if (isOnline) startLocationTracking();
+
+
+        // POLING FOR ORDER REQUESTS
+        let currentRequestId = null;
+        let pingerInterval = null;
+        let countdownInterval = null;
+        let timeRemaining = 0;
+        const popup = document.getElementById('orderPopup');
+
+        function startPolling() {
+            pingerInterval = setInterval(() => {
+                if (isOnline && !currentRequestId) {
+                    fetch('api_check_requests.php')
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.success && data.has_request) {
+                                showPopup(data.request, data.time_remaining);
+                            }
+                        })
+                        .catch(err => console.error(err));
+                }
+            }, 5000); // Check every 5 seconds
+        }
+
+        function showPopup(request, timeLimit) {
+            currentRequestId = request.request_id;
+            timeRemaining = Math.floor(timeLimit);
+            
+            document.getElementById('popValAmount').textContent = '₹' + request.total_amount;
+            document.getElementById('popValPickup').textContent = request.seller_name; // Truncate formatting if needed
+            document.getElementById('popValDropoff').textContent = request.dropoff_address.substring(0, 30) + '...';
+            
+            document.getElementById('popupTimer').textContent = timeRemaining;
+            popup.style.display = 'flex';
+            
+            countdownInterval = setInterval(() => {
+                timeRemaining--;
+                document.getElementById('popupTimer').textContent = timeRemaining;
+                
+                if (timeRemaining <= 0) {
+                    clearInterval(countdownInterval);
+                    popup.style.display = 'none';
+                    currentRequestId = null;
+                    // API implicitly times out or we force a reload
+                }
+            }, 1000);
+        }
+
+        function handleRequest(action) {
+            if (!currentRequestId) return;
+            
+            // disable buttons
+            document.getElementById('btnAccept').disabled = true;
+            
+            fetch('api_handle_request.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ request_id: currentRequestId, action: action })
+            })
+            .then(res => res.json())
+            .then(data => {
+                clearInterval(countdownInterval);
+                popup.style.display = 'none';
+                currentRequestId = null;
+                document.getElementById('btnAccept').disabled = false;
+                
+                if (data.success) {
+                    if (action === 'accept' && data.redirect) {
+                        window.location.href = data.redirect;
+                    } 
+                    // if reject, just dismiss popup and polling continues
+                }
+            });
+        }
+
+        // Start polling on page load
+        startPolling();
+
     </script>
 </body>
 </html>
