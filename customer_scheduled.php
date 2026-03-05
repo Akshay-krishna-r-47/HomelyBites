@@ -12,6 +12,18 @@ $formatted_name = formatName($_SESSION['name']);
 $user_name = htmlspecialchars($formatted_name);
 $user_initials = getAvatarInitials($formatted_name);
 $user_profile_image = getProfileImage($_SESSION['user_id'], $conn);
+
+$user_id = $_SESSION['user_id'];
+$scheduled_orders = [];
+$sql = "SELECT * FROM orders WHERE user_id = ? AND status = 'Scheduled' ORDER BY delivery_date ASC";
+$stmt = $conn->prepare($sql);
+$stmt->bind_param("i", $user_id);
+$stmt->execute();
+$result = $stmt->get_result();
+while ($row = $result->fetch_assoc()) {
+    $scheduled_orders[] = $row;
+}
+$stmt->close();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -104,11 +116,49 @@ $user_profile_image = getProfileImage($_SESSION['user_id'], $conn);
         </header>
         <div class="content-container">
             <div class="page-header"><h2>Scheduled Deliveries</h2></div>
-            <div class="empty-state">
-                <i class="fa-solid fa-calendar-check" style="font-size: 4rem; color: #eee; margin-bottom: 20px;"></i>
-                <p style="color: #7f8c8d; font-size: 1.1rem; margin-bottom: 20px;">No scheduled deliveries found.</p>
-                <a href="customer_dashboard.php" class="btn-browse">Find Food</a>
-            </div>
+            <?php if (count($scheduled_orders) > 0): ?>
+                <div style="background: white; border-radius: 12px; box-shadow: var(--shadow-card); overflow: hidden;">
+                <?php foreach ($scheduled_orders as $order): ?>
+                    <?php
+                        // Fetch items for this order
+                        $item_str = "";
+                        $oid = $order['order_id'];
+                        $sql_items = "SELECT f.name, oi.quantity FROM order_items oi JOIN foods f ON oi.food_id = f.id WHERE oi.order_id = ?";
+                        $stmt_items = $conn->prepare($sql_items);
+                        $stmt_items->bind_param("i", $oid);
+                        $stmt_items->execute();
+                        $res_items = $stmt_items->get_result();
+                        $items_arr = [];
+                        while($item = $res_items->fetch_assoc()){
+                            $items_arr[] = $item['name'] . " (" . $item['quantity'] . ")";
+                        }
+                        $item_str = implode(", ", $items_arr);
+                        $stmt_items->close();
+
+                        // Fallback for old orders that store items as string in 'items' column
+                        if (empty($item_str) && !empty($order['items'])) {
+                            $item_str = $order['items'];
+                        }
+                    ?>
+                    <div style="padding: 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <h4 style="font-size: 1.1rem; color: var(--text-dark); margin-bottom: 5px;">Order #<?php echo $order['order_id']; ?>: <?php echo htmlspecialchars($item_str); ?></h4>
+                            <p style="color: var(--text-muted); font-size: 0.9rem;"><i class="fa-regular fa-clock"></i> Scheduled for: <strong><?php echo date('M d, Y h:i A', strtotime($order['delivery_date'])); ?></strong></p>
+                            <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 5px;">Total: ₹<?php echo number_format($order['total_amount'], 2); ?></p>
+                        </div>
+                        <div>
+                            <span style="background: #e3f2fd; color: #1976d2; padding: 6px 14px; border-radius: 30px; font-size: 0.8rem; font-weight: 600;">Scheduled</span>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+                </div>
+            <?php else: ?>
+                <div class="empty-state">
+                    <i class="fa-solid fa-calendar-check" style="font-size: 4rem; color: #eee; margin-bottom: 20px;"></i>
+                    <p style="color: #7f8c8d; font-size: 1.1rem; margin-bottom: 20px;">No scheduled deliveries found.</p>
+                    <a href="customer_dashboard.php" class="btn-browse">Find Food</a>
+                </div>
+            <?php endif; ?>
         </div>
     </div>
     <script>function toggleSidebar(){document.querySelector('.sidebar').classList.toggle('collapsed');}</script>

@@ -14,6 +14,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $lat = isset($_POST['latitude']) && $_POST['latitude'] !== '' ? floatval($_POST['latitude']) : null;
     $lng = isset($_POST['longitude']) && $_POST['longitude'] !== '' ? floatval($_POST['longitude']) : null;
     
+    $delivery_time_type = isset($_POST['delivery_time_type']) ? $_POST['delivery_time_type'] : 'now';
+    $delivery_date = null;
+    $status = 'Pending';
+    if ($delivery_time_type === 'scheduled' && !empty($_POST['delivery_date'])) {
+        $delivery_date = date('Y-m-d H:i:s', strtotime($_POST['delivery_date']));
+        $status = 'Scheduled';
+    }
+
     // 1. Fetch Cart Items
     $sql = "SELECT c.id as cart_id, c.quantity, f.id as food_id, f.price, f.seller_id 
             FROM cart c 
@@ -54,10 +62,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $total_amount = $order_data['total'];
         
         // Insert into orders table
-        $insert_order = "INSERT INTO orders (user_id, seller_id, total_amount, status, payment_method, address, latitude, longitude, created_at) VALUES (?, ?, ?, 'Pending', ?, ?, ?, ?, NOW())";
+        $insert_order = "INSERT INTO orders (user_id, seller_id, total_amount, status, payment_method, address, latitude, longitude, delivery_date, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())";
         $stmt_order = $conn->prepare($insert_order);
         if ($stmt_order) {
-            $stmt_order->bind_param("iidssdd", $user_id, $seller_id, $total_amount, $payment_method, $address, $lat, $lng);
+            $stmt_order->bind_param("iidssddds", $user_id, $seller_id, $total_amount, $status, $payment_method, $address, $lat, $lng, $delivery_date);
             $stmt_order->execute();
             $order_id = $stmt_order->insert_id;
             $stmt_order->close();

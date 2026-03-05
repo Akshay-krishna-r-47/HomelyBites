@@ -134,6 +134,16 @@ if (empty($cart_items)) {
                 <h2>Delivery Details</h2>
                 <form action="place_order.php" method="POST">
                     <div class="form-group">
+                        <label>Delivery Time</label>
+                        <select name="delivery_time_type" id="delivery_time_type" onchange="document.getElementById('scheduled_time_container').style.display = this.value === 'scheduled' ? 'block' : 'none';" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem; margin-bottom: 10px;">
+                            <option value="now">Deliver Now (Asap)</option>
+                            <option value="scheduled">Schedule for Later</option>
+                        </select>
+                        <div id="scheduled_time_container" style="display: none;">
+                            <input type="datetime-local" name="delivery_date" id="delivery_date" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem;">
+                        </div>
+                    </div>
+                    <div class="form-group">
                         <label style="display: flex; justify-content: space-between; align-items: center;">
                             <span>Delivery Address</span>
                             <div style="display: flex; gap: 15px;">
