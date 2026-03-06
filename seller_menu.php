@@ -52,8 +52,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
              } else {
                  $image_path = handleImageUpload($_FILES['image']);
                  
-                 $stmt = $conn->prepare("INSERT INTO foods (seller_id, name, price, category, image, status, stock) VALUES (?, ?, ?, ?, ?, ?, ?)");
-                 $stmt->bind_param("isdsssi", $seller_id, $name, $price, $category, $image_path, $status, $stock);
+                 $avail_slot1_start = !empty($_POST['avail_slot1_start']) ? $_POST['avail_slot1_start'] : null;
+                 $avail_slot1_end = !empty($_POST['avail_slot1_end']) ? $_POST['avail_slot1_end'] : null;
+                 $avail_slot2_start = !empty($_POST['avail_slot2_start']) ? $_POST['avail_slot2_start'] : null;
+                 $avail_slot2_end = !empty($_POST['avail_slot2_end']) ? $_POST['avail_slot2_end'] : null;
+                 
+                 $stmt = $conn->prepare("INSERT INTO foods (seller_id, name, price, category, image, status, stock, avail_slot1_start, avail_slot1_end, avail_slot2_start, avail_slot2_end) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                 $stmt->bind_param("isdsssissss", $seller_id, $name, $price, $category, $image_path, $status, $stock, $avail_slot1_start, $avail_slot1_end, $avail_slot2_start, $avail_slot2_end);
                  
                  if ($stmt->execute()) {
                      $message = "Item added successfully."; $message_type = "success";
@@ -87,15 +92,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 // Check if new image uploaded
                 $new_image = handleImageUpload($_FILES['image']);
                 
+                $avail_slot1_start = !empty($_POST['avail_slot1_start']) ? $_POST['avail_slot1_start'] : null;
+                $avail_slot1_end = !empty($_POST['avail_slot1_end']) ? $_POST['avail_slot1_end'] : null;
+                $avail_slot2_start = !empty($_POST['avail_slot2_start']) ? $_POST['avail_slot2_start'] : null;
+                $avail_slot2_end = !empty($_POST['avail_slot2_end']) ? $_POST['avail_slot2_end'] : null;
+                
                 if ($new_image) {
-                    // Delete old image? Optional.
-                    $sql = "UPDATE foods SET name=?, price=?, category=?, status=?, image=?, stock=? WHERE id=? AND seller_id=?";
+                    $sql = "UPDATE foods SET name=?, price=?, category=?, status=?, image=?, stock=?, avail_slot1_start=?, avail_slot1_end=?, avail_slot2_start=?, avail_slot2_end=? WHERE id=? AND seller_id=?";
                     $stmt = $conn->prepare($sql);
-                    $stmt->bind_param("sdsssiii", $name, $price, $category, $status, $new_image, $stock, $food_id, $seller_id);
+                    $stmt->bind_param("sdsssISSSSII", $name, $price, $category, $status, $new_image, $stock, $avail_slot1_start, $avail_slot1_end, $avail_slot2_start, $avail_slot2_end, $food_id, $seller_id);
                 } else {
-                    $sql = "UPDATE foods SET name=?, price=?, category=?, status=?, stock=? WHERE id=? AND seller_id=?";
+                    $sql = "UPDATE foods SET name=?, price=?, category=?, status=?, stock=?, avail_slot1_start=?, avail_slot1_end=?, avail_slot2_start=?, avail_slot2_end=? WHERE id=? AND seller_id=?";
                     $stmt = $conn->prepare($sql);
-                    $stmt->bind_param("sdssiii", $name, $price, $category, $status, $stock, $food_id, $seller_id);
+                    $stmt->bind_param("sdssiSSSSii", $name, $price, $category, $status, $stock, $avail_slot1_start, $avail_slot1_end, $avail_slot2_start, $avail_slot2_end, $food_id, $seller_id);
                 }
 
                 if ($stmt->execute()) {
@@ -151,17 +160,23 @@ $stmt->close();
         h2 { font-size: 28px; font-weight: 700; margin-bottom: 30px; color: #222; }
 
         /* Modal Overlay */
-        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); align-items: center; justify-content: center; backdrop-filter: blur(4px); }
-        .modal.active { display: flex; }
-        .modal-content { background-color: #fefefe; padding: 30px; border-radius: 16px; width: 500px; max-width: 90%; animation: slideIn 0.3s; position: relative; }
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); align-items: center; justify-content: center; backdrop-filter: blur(4px); padding: 20px; overflow-y: auto; }
+        .modal.active { display: flex; align-items: flex-start; }
+        .modal-content { background-color: #fefefe; padding: 30px; border-radius: 16px; width: 500px; max-width: 90%; margin: 40px auto; animation: slideIn 0.3s; position: relative; }
         @keyframes slideIn { from{transform:translateY(-50px);opacity:0} to{transform:translateY(0);opacity:1} }
         
-        .close-modal { position: absolute; top: 20px; right: 20px; font-size: 1.5rem; cursor: pointer; color: #888; }
+        .close-modal { position: absolute; top: 20px; right: 20px; font-size: 1.5rem; cursor: pointer; color: #888; z-index: 10; background: white; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .close-modal:hover { background: #f0f0f0; color: #333; }
         
         .form-group { margin-bottom: 20px; }
-        .form-group label { display: block; font-weight: 600; margin-bottom: 8px; color: #444; }
+        .form-group label { display: block; font-weight: 600; margin-bottom: 8px; color: #444; font-size: 0.9rem; }
         .form-group input, .form-group select { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; }
         .form-group input:focus, .form-group select:focus { border-color: var(--brand-green); outline: none; }
+        .time-slots-container { background: #f9f9f9; padding: 15px; border-radius: 8px; border: 1px solid #eee; margin-bottom: 20px; }
+        .time-slots-title { font-weight: 600; font-size: 0.9rem; margin-bottom: 10px; color: #333; }
+        .time-group { display: flex; gap: 10px; margin-bottom: 10px; align-items: center; }
+        .time-group input[type="time"] { padding: 8px; font-size: 0.9rem; }
+        .time-group span { font-size: 0.9rem; color: #666; font-weight: 500; }
         
         .food-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 24px; padding-bottom: 40px; }
         
@@ -244,6 +259,11 @@ $stmt->close();
                             <i class="fa-solid fa-box"></i> Stock: <?php echo $food['stock']; ?>
                         </span>
                     </div>
+                    <?php if(!empty($food['avail_slot1_start']) || !empty($food['avail_slot2_start'])): ?>
+                        <div style="margin-top: 10px; font-size: 0.8rem; color: #f39c12; background: #fff8e1; padding: 4px 8px; border-radius: 4px; display: inline-block;">
+                            <i class="fa-regular fa-clock"></i> Time Restricted
+                        </div>
+                    <?php endif; ?>
                 </div>
                 <div class="card-actions">
                     <button class="btn-action" onclick='openEditModal(<?php echo json_encode($food); ?>)'><i class="fa-solid fa-pen"></i></button>
@@ -308,6 +328,26 @@ $stmt->close();
                     <input type="file" name="image" accept="image/*">
                     <small style="color: #999">Leave empty to keep current image (for edits)</small>
                 </div>
+                
+                <div class="time-slots-container">
+                    <div class="time-slots-title"><i class="fa-regular fa-clock"></i> Availability Time Slots (Optional)</div>
+                    <p style="font-size: 0.8rem; color: #666; margin-bottom: 15px;">Leave blank to make this item available to order 24/7.</p>
+                    
+                    <label style="font-size: 0.85rem; font-weight: 500; color: #555; display: block; margin-bottom: 5px;">Slot 1 (e.g. Morning)</label>
+                    <div class="time-group">
+                        <input type="time" name="avail_slot1_start" id="slot1Start">
+                        <span>to</span>
+                        <input type="time" name="avail_slot1_end" id="slot1End">
+                    </div>
+
+                    <label style="font-size: 0.85rem; font-weight: 500; color: #555; display: block; margin-bottom: 5px; margin-top: 15px;">Slot 2 (e.g. Evening)</label>
+                    <div class="time-group">
+                        <input type="time" name="avail_slot2_start" id="slot2Start">
+                        <span>to</span>
+                        <input type="time" name="avail_slot2_end" id="slot2End">
+                    </div>
+                </div>
+
                 <button type="submit" class="btn-primary" style="width: 100%;">Save Item</button>
             </form>
         </div>
@@ -349,6 +389,12 @@ $stmt->close();
                 document.getElementById('itemStock').value = "0";
                 document.getElementById('itemCategory').value = "Main Course";
                 document.getElementById('itemStatus').value = "Available";
+                
+                // Clear times
+                document.getElementById('slot1Start').value = "";
+                document.getElementById('slot1End').value = "";
+                document.getElementById('slot2Start').value = "";
+                document.getElementById('slot2End').value = "";
             }
         }
         
@@ -363,6 +409,12 @@ $stmt->close();
             document.getElementById('itemStock').value = food.stock;
             document.getElementById('itemCategory').value = food.category;
             document.getElementById('itemStatus').value = food.status;
+            
+            // Populate times
+            document.getElementById('slot1Start').value = food.avail_slot1_start ? food.avail_slot1_start.substring(0,5) : "";
+            document.getElementById('slot1End').value = food.avail_slot1_end ? food.avail_slot1_end.substring(0,5) : "";
+            document.getElementById('slot2Start').value = food.avail_slot2_start ? food.avail_slot2_start.substring(0,5) : "";
+            document.getElementById('slot2End').value = food.avail_slot2_end ? food.avail_slot2_end.substring(0,5) : "";
         }
 
         function closeModal() {

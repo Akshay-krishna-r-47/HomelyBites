@@ -262,8 +262,14 @@ if (empty($cart_items)) {
                             </label>
                         </div>
                     </div>
-                    <input type="hidden" name="total_amount" value="<?php echo $total_price; ?>">
-                    <button type="submit" class="btn-pay">Place Order</button>
+                    <input type="hidden" name="total_amount" id="total_amount" value="<?php echo $total_price; ?>">
+                    
+                    <!-- Hidden inputs for Razorpay payload -->
+                    <input type="hidden" name="razorpay_payment_id" id="razorpay_payment_id">
+                    <input type="hidden" name="razorpay_order_id" id="razorpay_order_id">
+                    <input type="hidden" name="razorpay_signature" id="razorpay_signature">
+                    
+                    <button type="submit" class="btn-pay" id="pay-btn">Place Order</button>
                 </form>
             </div>
             
@@ -289,6 +295,10 @@ if (empty($cart_items)) {
             </div>
         </div>
     </div>
+    
+    <!-- Razorpay Checkout JS -->
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
@@ -473,6 +483,92 @@ if (empty($cart_items)) {
             // Add 'selected' class to the parent label of the clicked radio
             selectedRadio.closest('.payment-option').classList.add('selected');
         }
+
+        // --- Razorpay Payment Gateway Integration ---
+        document.querySelector('form').addEventListener('submit', function(e) {
+            const paymentMethod = document.querySelector('input[name="payment_method"]:checked').value;
+            const address = document.getElementById('address-field').value;
+            
+            // Check required fields manually since we might intercept submission
+            if(!address.trim()) {
+                alert("Please enter a delivery address.");
+                e.preventDefault();
+                return;
+            }
+
+            if (paymentMethod !== 'COD') {
+                e.preventDefault(); // Stop normal form submission
+                
+                const btnPay = document.getElementById('pay-btn');
+                const originalText = btnPay.innerText;
+                btnPay.innerText = 'Processing...';
+                btnPay.disabled = true;
+
+                const amount = document.getElementById('total_amount').value;
+
+                // 1. Fetch Razorpay Order ID from backend
+                fetch('api_create_razorpay_order.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ amount: amount })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        // 2. Open Razorpay Checkout Modal
+                        var options = {
+                            "key": data.key, 
+                            "amount": data.amount,
+                            "currency": data.currency,
+                            "name": "Homely Bites",
+                            "description": "Food Order Payment",
+                            "image": "assets/images/logo.png",
+                            "order_id": data.order_id,
+                            "handler": function (response){
+                                // 3. Payment Success - Inject credentials back into form hidden inputs
+                                document.getElementById('razorpay_payment_id').value = response.razorpay_payment_id;
+                                document.getElementById('razorpay_order_id').value = response.razorpay_order_id;
+                                document.getElementById('razorpay_signature').value = response.razorpay_signature;
+                                
+                                // 4. Submit form correctly now that payment is done
+                                document.querySelector('form').submit();
+                            },
+                            "prefill": {
+                                "name": "<?php echo addslashes($user_name); ?>",
+                                "contact": ""
+                            },
+                            "theme": {
+                                "color": "#0a8f08"
+                            },
+                            "modal": {
+                                "ondismiss": function(){
+                                    btnPay.innerText = originalText;
+                                    btnPay.disabled = false;
+                                }
+                            }
+                        };
+                        var rzp1 = new Razorpay(options);
+                        rzp1.on('payment.failed', function (response){
+                                alert("Payment Failed: " + response.error.description);
+                                btnPay.innerText = originalText;
+                                btnPay.disabled = false;
+                        });
+                        rzp1.open();
+                    } else {
+                        alert("Error initializing payment: " + data.message);
+                        btnPay.innerText = originalText;
+                        btnPay.disabled = false;
+                    }
+                })
+                .catch(err => {
+                    console.error("Payment API Error: ", err);
+                    alert("A network error occurred while reaching the payment gateway.");
+                    btnPay.innerText = originalText;
+                    btnPay.disabled = false;
+                });
+            }
+            // If COD, it just submits naturally
+        });
     </script>
 </body>
 </html>

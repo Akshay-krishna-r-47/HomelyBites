@@ -241,13 +241,13 @@ $user_profile_image = getProfileImage($_SESSION['user_id'], $conn);
             <div class="food-grid">
                 <?php
                 if ($selected_category !== 'all') {
-                    $rec_sql = "SELECT id, name, price, image, category, stock FROM foods WHERE status = 'Available' AND is_deleted = 0 AND category = ? ORDER BY id DESC LIMIT 50";
+                    $rec_sql = "SELECT id, name, price, image, category, stock, avail_slot1_start, avail_slot1_end, avail_slot2_start, avail_slot2_end FROM foods WHERE status = 'Available' AND is_deleted = 0 AND category = ? ORDER BY id DESC LIMIT 50";
                     $stmt = $conn->prepare($rec_sql);
                     if ($stmt) {
                         $stmt->bind_param("s", $selected_category);
                     }
                 } else {
-                    $rec_sql = "SELECT id, name, price, image, category, stock FROM foods WHERE status = 'Available' AND is_deleted = 0 ORDER BY id DESC LIMIT 12";
+                    $rec_sql = "SELECT id, name, price, image, category, stock, avail_slot1_start, avail_slot1_end, avail_slot2_start, avail_slot2_end FROM foods WHERE status = 'Available' AND is_deleted = 0 ORDER BY id DESC LIMIT 12";
                     $stmt = $conn->prepare($rec_sql);
                 }
 
@@ -262,6 +262,30 @@ $user_profile_image = getProfileImage($_SESSION['user_id'], $conn);
                             $f_image = $row['image'];
                             $f_cat = isset($row['category']) ? htmlspecialchars($row['category']) : 'Delicious';
                             $f_stock = (int)$row['stock'];
+                            
+                            // Time Slot Logic
+                            $is_time_available = true;
+                            $availability_message = "";
+                            
+                            $s1_start = $row['avail_slot1_start'];
+                            $s1_end = $row['avail_slot1_end'];
+                            $s2_start = $row['avail_slot2_start'];
+                            $s2_end = $row['avail_slot2_end'];
+                            
+                            if (!empty($s1_start) || !empty($s2_start)) {
+                                $current_time = date('H:i:s');
+                                $in_slot1 = (!empty($s1_start) && !empty($s1_end) && $current_time >= $s1_start && $current_time <= $s1_end);
+                                $in_slot2 = (!empty($s2_start) && !empty($s2_end) && $current_time >= $s2_start && $current_time <= $s2_end);
+                                
+                                if (!$in_slot1 && !$in_slot2) {
+                                    $is_time_available = false;
+                                    // Build helpful message
+                                    $mssg = [];
+                                    if(!empty($s1_start)) $mssg[] = date('h:i A', strtotime($s1_start)) . " - " . date('h:i A', strtotime($s1_end));
+                                    if(!empty($s2_start)) $mssg[] = date('h:i A', strtotime($s2_start)) . " - " . date('h:i A', strtotime($s2_end));
+                                    $availability_message = "Available: " . implode(" & ", $mssg);
+                                }
+                            }
                             
                             // Fallback image logic - Updated to image-coming-soon.png
                             if (empty($f_image) || !file_exists($f_image)) {
@@ -282,13 +306,22 @@ $user_profile_image = getProfileImage($_SESSION['user_id'], $conn);
                                             <?php endif; ?>
                                         </div>
                                         
-                                        <div class="food-footer">
+                                        <div class="food-footer" style="flex-wrap: wrap; gap: 5px;">
                                             <div class="food-price">₹<?php echo $f_price; ?></div>
+                                            <?php if(!$is_time_available): ?>
+                                                <div style="width: 100%; font-size: 0.75rem; color: #f57c00; font-weight: 600; margin-top: 4px;">
+                                                    <i class="fa-regular fa-clock"></i> <?php echo $availability_message; ?>
+                                                </div>
+                                            <?php endif; ?>
                                         </div>
                                     </div>
                                 </a>
                                 <div style="padding: 0 16px 16px 16px;">
-                                    <?php if ($f_stock > 0): ?>
+                                    <?php if (!$is_time_available): ?>
+                                        <button disabled style="width:100%; padding: 8px; background:#fff3e0; border:1px solid #ffe0b2; color:#f57c00; border-radius:4px; font-weight:600; cursor:not-allowed;">
+                                            CURRENTLY UNAVAILABLE
+                                        </button>
+                                    <?php elseif ($f_stock > 0): ?>
                                         <form action="handle_cart.php" method="POST">
                                             <input type="hidden" name="food_id" value="<?php echo $row['id']; ?>">
                                             <button type="submit" name="action" value="add" style="width:100%; padding: 8px; background:white; border:1px solid #0a8f08; color:#0a8f08; border-radius:4px; font-weight:600; cursor:pointer;" onmouseover="this.style.background='#0a8f08'; this.style.color='white';" onmouseout="this.style.background='white'; this.style.color='#0a8f08';">

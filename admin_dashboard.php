@@ -13,6 +13,24 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'Admin') {
 $formatted_name = formatName($_SESSION['name']);
 $admin_name = htmlspecialchars($formatted_name);
 $admin_initials = getAvatarInitials($formatted_name);
+
+// Fetch Dashboard Counts upfront
+include_once 'db_connect.php'; 
+
+// Check Pending Requests
+$req_count_sql = "SELECT COUNT(*) as count FROM seller_applications WHERE status='Pending'";
+$req_result = $conn->query($req_count_sql);
+$pending_requests_count = ($req_result && $row = $req_result->fetch_assoc()) ? $row['count'] : 0;
+
+// Check Total Orders
+$order_count_sql = "SELECT COUNT(*) as count FROM orders";
+$order_result = $conn->query($order_count_sql);
+$total_orders_count = ($order_result && $row = $order_result->fetch_assoc()) ? $row['count'] : 0;
+
+// Check Pending Delivery Requests
+$del_req_count_sql = "SELECT COUNT(*) as count FROM delivery_applications WHERE status='Pending'";
+$del_req_result = $conn->query($del_req_count_sql);
+$pending_delivery_count = ($del_req_result && $row = $del_req_result->fetch_assoc()) ? $row['count'] : 0;
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -189,19 +207,6 @@ $admin_initials = getAvatarInitials($formatted_name);
                     <div style="width: 80px; height: 80px; background-color: #fff3e0; color: #f39c12; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; font-size: 2rem;">
                         <i class="fa-solid fa-truck"></i>
                     </div>
-                    <?php
-                        // Need to fetch count here if not using sidebar includes variable in scope? 
-                        // Usually sidebar is included first, but dashboard content is after header. 
-                        // Wait, sidebar is included at line 150. Variables from it might be available if scope allows.
-                        // admin_sidebar maps variables in global scope of included file? Yes.
-                        // But let's be safe and re-query or check if set. 
-                        // Actually, dashboard code runs after sidebar include.
-                        if (!isset($pending_delivery_count)) {
-                            $del_req_count_sql = "SELECT COUNT(*) as count FROM delivery_applications WHERE status='Pending'";
-                            $del_req_result = $conn->query($del_req_count_sql);
-                            $pending_delivery_count = ($del_req_result && $row = $del_req_result->fetch_assoc()) ? $row['count'] : 0;
-                        }
-                    ?>
                     <h3 style="font-size: 3rem; margin-bottom: 10px; color: #2c3e50;"><?php echo $pending_delivery_count; ?></h3>
                     <p style="color: #7f8c8d; font-weight: 600;">Pending Delivery Requests</p>
                     <a href="admin_delivery_requests.php" style="display: inline-block; margin-top: 20px; color: var(--primary-color); font-weight: 700; text-decoration: none;">View Requests &rarr;</a>

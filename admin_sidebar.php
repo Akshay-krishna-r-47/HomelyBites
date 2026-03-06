@@ -155,23 +155,31 @@ $current_page = basename($_SERVER['PHP_SELF']);
     .sidebar.collapsed .badge { display: none; }
 </style>
 <?php
-// Calculate counts
-include_once 'db_connect.php'; 
-// Check Pending Requests
-$req_count_sql = "SELECT COUNT(*) as count FROM seller_applications WHERE status='Pending'";
-$req_result = $conn->query($req_count_sql);
-$pending_requests_count = ($req_result && $row = $req_result->fetch_assoc()) ? $row['count'] : 0;
+// Calculate counts if not already done by the parent page
+if (!isset($conn)) {
+    include_once 'db_connect.php'; 
+}
 
-// Check Total Orders
-$order_count_sql = "SELECT COUNT(*) as count FROM orders";
-$order_result = $conn->query($order_count_sql);
-$total_orders_count = ($order_result && $row = $order_result->fetch_assoc()) ? $row['count'] : 0;
-$total_orders_count = ($order_result && $row = $order_result->fetch_assoc()) ? $row['count'] : 0;
+if (!isset($pending_requests_count)) {
+    // Check Pending Requests
+    $req_count_sql = "SELECT COUNT(*) as count FROM seller_applications WHERE status='Pending'";
+    $req_result = $conn->query($req_count_sql);
+    $pending_requests_count = ($req_result && $row = $req_result->fetch_assoc()) ? $row['count'] : 0;
+}
 
-// Check Pending Delivery Requests
-$del_req_count_sql = "SELECT COUNT(*) as count FROM delivery_applications WHERE status='Pending'";
-$del_req_result = $conn->query($del_req_count_sql);
-$pending_delivery_count = ($del_req_result && $row = $del_req_result->fetch_assoc()) ? $row['count'] : 0;
+if (!isset($total_orders_count)) {
+    // Check Total Orders
+    $order_count_sql = "SELECT COUNT(*) as count FROM orders";
+    $order_result = $conn->query($order_count_sql);
+    $total_orders_count = ($order_result && $row = $order_result->fetch_assoc()) ? $row['count'] : 0;
+}
+
+if (!isset($pending_delivery_count)) {
+    // Check Pending Delivery Requests
+    $del_req_count_sql = "SELECT COUNT(*) as count FROM delivery_applications WHERE status='Pending'";
+    $del_req_result = $conn->query($del_req_count_sql);
+    $pending_delivery_count = ($del_req_result && $row = $del_req_result->fetch_assoc()) ? $row['count'] : 0;
+}
 ?>
 <!-- Left Sidebar -->
 <aside class="sidebar">

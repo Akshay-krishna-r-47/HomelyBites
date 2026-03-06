@@ -30,6 +30,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
+    // Razorpay Verification
+    $rzp_payment_id = isset($_POST['razorpay_payment_id']) ? $_POST['razorpay_payment_id'] : null;
+    $rzp_order_id = isset($_POST['razorpay_order_id']) ? $_POST['razorpay_order_id'] : null;
+    $rzp_signature = isset($_POST['razorpay_signature']) ? $_POST['razorpay_signature'] : null;
+    
+    if ($payment_method !== 'COD') {
+        if (empty($rzp_payment_id) || empty($rzp_order_id) || empty($rzp_signature)) {
+            die("Payment verification failed. Missing Razorpay parameters.");
+        }
+        
+        $key_secret = "mZIV1x3xx4tq549AAzwmIT0c";
+        $generated_signature = hash_hmac('sha256', $rzp_order_id . "|" . $rzp_payment_id, $key_secret);
+        
+        if (!hash_equals($generated_signature, $rzp_signature)) {
+            die("Payment verification failed. Signatures do not match. Possible tampering.");
+        }
+    }
+
     // 1. Fetch Cart Items
     $sql = "SELECT c.id as cart_id, c.quantity, f.id as food_id, f.price, f.seller_id 
             FROM cart c 
@@ -77,10 +95,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             // Insert into orders table
-            $insert_order = "INSERT INTO orders (user_id, seller_id, total_amount, status, payment_method, address, latitude, longitude, delivery_date, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())";
+            $insert_order = "INSERT INTO orders (user_id, seller_id, total_amount, status, payment_method, address, latitude, longitude, delivery_date, created_at, razorpay_order_id, razorpay_payment_id, razorpay_signature) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?, ?)";
             $stmt_order = $conn->prepare($insert_order);
             if ($stmt_order) {
-                $stmt_order->bind_param("iidsssdds", $user_id, $seller_id, $total_amount, $status, $payment_method, $address, $lat, $lng, $current_delivery_date);
+                $stmt_order->bind_param("iidsssddssss", $user_id, $seller_id, $total_amount, $status, $payment_method, $address, $lat, $lng, $current_delivery_date, $rzp_order_id, $rzp_payment_id, $rzp_signature);
                 $stmt_order->execute();
                 $order_id = $stmt_order->insert_id;
                 $stmt_order->close();
