@@ -135,12 +135,74 @@ if (empty($cart_items)) {
                 <form action="place_order.php" method="POST">
                     <div class="form-group">
                         <label>Delivery Time</label>
-                        <select name="delivery_time_type" id="delivery_time_type" onchange="document.getElementById('scheduled_time_container').style.display = this.value === 'scheduled' ? 'block' : 'none';" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem; margin-bottom: 10px;">
+                        <select name="delivery_time_type" id="delivery_time_type" onchange="
+                            const isScheduled = this.value === 'scheduled';
+                            const container = document.getElementById('scheduled_time_container');
+                            if (isScheduled) {
+                                container.style.display = 'block';
+                                setTimeout(() => container.style.opacity = '1', 10);
+                            } else {
+                                container.style.opacity = '0';
+                                setTimeout(() => container.style.display = 'none', 300);
+                            }
+                            document.getElementById('delivery_date').required = isScheduled;
+                            document.getElementById('del_hour').required = isScheduled;
+                            document.getElementById('del_minute').required = isScheduled;
+                        " style="width: 100%; padding: 14px; border: 1.5px solid #eaeaea; border-radius: 10px; font-size: 1rem; margin-bottom: 20px; outline: none; transition: 0.2s; cursor: pointer; background-color: #fcfcfc;" onfocus="this.style.borderColor='#0a8f08'" onblur="this.style.borderColor='#eaeaea'">
                             <option value="now">Deliver Now (Asap)</option>
                             <option value="scheduled">Schedule for Later</option>
                         </select>
-                        <div id="scheduled_time_container" style="display: none;">
-                            <input type="datetime-local" name="delivery_date" id="delivery_date" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem;">
+
+                        <style>
+                            #time-inputs-wrapper select option {
+                                background-color: #ffffff;
+                                color: #222222;
+                            }
+                        </style>
+                        <div id="scheduled_time_container" style="display: none; opacity: 0; transition: opacity 0.3s ease; background: #f0fdf4; padding: 25px; border-radius: 12px; border: 1px dashed #0a8f08;">
+                            <h4 style="font-size: 1.05rem; font-weight: 600; color: #333; margin-bottom: 15px; display: flex; align-items: center; gap: 8px;"><i class="fa-regular fa-calendar-check" style="color: var(--brand-green);"></i> Choose your delivery slot</h4>
+                            <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+                                <div style="flex: 1; min-width: 200px;">
+                                    <label style="font-size: 0.85rem; color: #666; margin-bottom: 6px; font-weight: 500; display: block; text-transform: uppercase; letter-spacing: 0.5px;">Select Date</label>
+                                    <input type="date" name="delivery_date" id="delivery_date" min="<?php echo date('Y-m-d'); ?>" style="width: 100%; padding: 14px; border: 1.5px solid #eaeaea; border-radius: 10px; font-size: 1rem; outline: none; transition: 0.2s; background: white;" onfocus="this.style.borderColor='#0a8f08'" onblur="this.style.borderColor='#eaeaea'">
+                                </div>
+                                <div style="flex: 1.5; min-width: 250px;">
+                                    <label style="font-size: 0.85rem; color: #666; margin-bottom: 6px; font-weight: 500; display: block; text-transform: uppercase; letter-spacing: 0.5px;">Select Time</label>
+                                    <div style="display: flex; gap: 8px; align-items: center; background: white; border: 1.5px solid #eaeaea; border-radius: 10px; padding: 4px; transition: 0.2s;" id="time-inputs-wrapper">
+                                        <select name="del_hour" id="del_hour" style="flex: 1; padding: 10px; border: none; border-radius: 6px; font-size: 1.05rem; font-weight: 500; outline: none; background: transparent; cursor: pointer; text-align: center; appearance: none; -moz-appearance: none; -webkit-appearance: none; color: #222;" onfocus="document.getElementById('time-inputs-wrapper').style.borderColor='#0a8f08'; this.style.backgroundColor='#f0fdf4'; this.style.color='#0a8f08';" onblur="document.getElementById('time-inputs-wrapper').style.borderColor='#eaeaea'; this.style.backgroundColor='transparent'; this.style.color='#222';">
+                                            <option value="" disabled selected>HH</option>
+                                            <option value="12">12</option>
+                                            <option value="01">01</option>
+                                            <option value="02">02</option>
+                                            <option value="03">03</option>
+                                            <option value="04">04</option>
+                                            <option value="05">05</option>
+                                            <option value="06">06</option>
+                                            <option value="07">07</option>
+                                            <option value="08">08</option>
+                                            <option value="09">09</option>
+                                            <option value="10">10</option>
+                                            <option value="11">11</option>
+                                        </select>
+                                        <span style="font-weight: 700; color: #aaa; font-size: 1.2rem; padding-bottom: 3px;">:</span>
+                                        <select name="del_minute" id="del_minute" style="flex: 1; padding: 10px; border: none; border-radius: 6px; font-size: 1.05rem; font-weight: 500; outline: none; background: transparent; cursor: pointer; text-align: center; appearance: none; -moz-appearance: none; -webkit-appearance: none; max-height: 200px; overflow-y: auto; color: #222;" onfocus="document.getElementById('time-inputs-wrapper').style.borderColor='#0a8f08'; this.style.backgroundColor='#f0fdf4'; this.style.color='#0a8f08';" onblur="document.getElementById('time-inputs-wrapper').style.borderColor='#eaeaea'; this.style.backgroundColor='transparent'; this.style.color='#222';">
+                                            <option value="" disabled selected>MM</option>
+                                            <?php for($i=0; $i<60; $i++): $min = str_pad($i, 2, '0', STR_PAD_LEFT); ?>
+                                                <option value="<?php echo $min; ?>"><?php echo $min; ?></option>
+                                            <?php endfor; ?>
+                                        </select>
+                                        <span style="width: 1px; height: 25px; background: #eaeaea; margin: 0 5px;"></span>
+                                        <select name="del_ampm" id="del_ampm" style="flex: 1; padding: 10px; border: none; border-radius: 6px; font-size: 1rem; font-weight: 600; outline: none; background: #f8f9fa; cursor: pointer; text-align: center; appearance: none; -moz-appearance: none; -webkit-appearance: none; color: #222;" onfocus="document.getElementById('time-inputs-wrapper').style.borderColor='#0a8f08'; this.style.backgroundColor='#0a8f08'; this.style.color='white';" onblur="document.getElementById('time-inputs-wrapper').style.borderColor='#eaeaea'; this.style.backgroundColor='#f8f9fa'; this.style.color='#222';">
+                                            <option value="AM">AM</option>
+                                            <option value="PM">PM</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div style="flex: 1; min-width: 120px;">
+                                    <label style="font-size: 0.85rem; color: #666; margin-bottom: 6px; font-weight: 500; display: block; text-transform: uppercase; letter-spacing: 0.5px;">Repeat For (Days)</label>
+                                    <input type="text" inputmode="numeric" pattern="[0-9]*" name="repeat_days" id="repeat_days" value="1" style="width: 100%; padding: 14px; border: 1.5px solid #eaeaea; border-radius: 10px; font-size: 1rem; outline: none; transition: 0.2s; background: white;" onfocus="this.style.borderColor='#0a8f08'" oninput="this.value = this.value.replace(/[^0-9]/g, ''); if(this.value !== '' && parseInt(this.value) > 30) this.value = '30';" onblur="if(this.value === '' || parseInt(this.value) < 1) this.value = '1'; this.style.borderColor='#eaeaea'">
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <div class="form-group">

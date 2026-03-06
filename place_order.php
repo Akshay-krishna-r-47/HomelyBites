@@ -15,11 +15,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $lng = isset($_POST['longitude']) && $_POST['longitude'] !== '' ? floatval($_POST['longitude']) : null;
     
     $delivery_time_type = isset($_POST['delivery_time_type']) ? $_POST['delivery_time_type'] : 'now';
-    $delivery_date = null;
+    $repeat_days = isset($_POST['repeat_days']) ? max(1, intval($_POST['repeat_days'])) : 1;
+    $delivery_date_base = null;
     $status = 'Pending';
-    if ($delivery_time_type === 'scheduled' && !empty($_POST['delivery_date'])) {
-        $delivery_date = date('Y-m-d H:i:s', strtotime($_POST['delivery_date']));
-        $status = 'Scheduled';
+    if ($delivery_time_type === 'scheduled') {
+        if (!empty($_POST['delivery_date']) && !empty($_POST['del_hour']) && !empty($_POST['del_minute']) && !empty($_POST['del_ampm'])) {
+            $combined_datetime = $_POST['delivery_date'] . ' ' . $_POST['del_hour'] . ':' . $_POST['del_minute'] . ' ' . $_POST['del_ampm'];
+            $delivery_date_base = date('Y-m-d H:i:s', strtotime($combined_datetime));
+            $status = 'Scheduled';
+        } else {
+            // Redirect back or exit if no valid date/time is provided
+            header("Location: customer_checkout.php");
+            exit();
+        }
     }
 
     // 1. Fetch Cart Items
@@ -61,35 +69,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     foreach ($orders_by_seller as $seller_id => $order_data) {
         $total_amount = $order_data['total'];
         
-        // Insert into orders table
-        $insert_order = "INSERT INTO orders (user_id, seller_id, total_amount, status, payment_method, address, latitude, longitude, delivery_date, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())";
-        $stmt_order = $conn->prepare($insert_order);
-        if ($stmt_order) {
-            $stmt_order->bind_param("iidssddds", $user_id, $seller_id, $total_amount, $status, $payment_method, $address, $lat, $lng, $delivery_date);
-            $stmt_order->execute();
-            $order_id = $stmt_order->insert_id;
-            $stmt_order->close();
-            
-            // Insert Order Items
-            $insert_item = "INSERT INTO order_items (order_id, food_id, quantity, price) VALUES (?, ?, ?, ?)";
-            $stmt_item = $conn->prepare($insert_item);
-            
-            foreach ($order_data['items'] as $item) {
-                // Insert order item
-                $stmt_item->bind_param("iiid", $order_id, $item['food_id'], $item['quantity'], $item['price']);
-                $stmt_item->execute();
-                
-                // Deduct stock
-                $deduct_sql = "UPDATE foods SET stock = stock - ? WHERE id = ? AND stock >= ?";
-                $stmt_deduct = $conn->prepare($deduct_sql);
-                $stmt_deduct->bind_param("iii", $item['quantity'], $item['food_id'], $item['quantity']);
-                $stmt_deduct->execute();
-                $stmt_deduct->close();
+        for ($i = 0; $i < $repeat_days; $i++) {
+            $current_delivery_date = $delivery_date_base;
+            if ($status === 'Scheduled' && $delivery_date_base !== null) {
+                // Add $i days to the base date
+                $current_delivery_date = date('Y-m-d H:i:s', strtotime("$delivery_date_base +$i days"));
             }
-            $stmt_item->close();
-        } else {
-            // Handle error (table might process differently)
-            // For now, continue to next seller or log error
+
+            // Insert into orders table
+            $insert_order = "INSERT INTO orders (user_id, seller_id, total_amount, status, payment_method, address, latitude, longitude, delivery_date, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())";
+            $stmt_order = $conn->prepare($insert_order);
+            if ($stmt_order) {
+                $stmt_order->bind_param("iidsssdds", $user_id, $seller_id, $total_amount, $status, $payment_method, $address, $lat, $lng, $current_delivery_date);
+                $stmt_order->execute();
+                $order_id = $stmt_order->insert_id;
+                $stmt_order->close();
+                
+                // Insert Order Items
+                $insert_item = "INSERT INTO order_items (order_id, food_id, quantity, price) VALUES (?, ?, ?, ?)";
+                $stmt_item = $conn->prepare($insert_item);
+                
+                foreach ($order_data['items'] as $item) {
+                    // Insert order item
+                    $stmt_item->bind_param("iiid", $order_id, $item['food_id'], $item['quantity'], $item['price']);
+                    $stmt_item->execute();
+                    
+                    // Deduct stock
+                    $deduct_sql = "UPDATE foods SET stock = stock - ? WHERE id = ? AND stock >= ?";
+                    $stmt_deduct = $conn->prepare($deduct_sql);
+                    $stmt_deduct->bind_param("iii", $item['quantity'], $item['food_id'], $item['quantity']);
+                    $stmt_deduct->execute();
+                    $stmt_deduct->close();
+                }
+                $stmt_item->close();
+            }
         }
     }
     

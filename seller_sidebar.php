@@ -186,3 +186,25 @@ $current_page = basename($_SERVER['PHP_SELF']);
         </ul>
     </div>
 </aside>
+
+<!-- Automated Scheduled Orders Trigger -->
+<script>
+    // Run exactly once on load, and then every 60 seconds
+    function triggerScheduledCron() {
+        fetch('api_cron_scheduled.php')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.message.includes('Successfully activated') && !data.message.includes('0 scheduled orders')) {
+                    // Optional: You could reload the page if you wanted to here, 
+                    // but for now just logging it to console is safely silent
+                    console.log('Automated System:', data.message);
+                }
+            })
+            .catch(err => console.error('Cron Error:', err));
+    }
+    
+    // Initial trigger
+    setTimeout(triggerScheduledCron, 2000);
+    // Recurring trigger every 60 seconds (60000 ms)
+    setInterval(triggerScheduledCron, 60000);
+</script>

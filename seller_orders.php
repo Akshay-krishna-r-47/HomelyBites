@@ -49,9 +49,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['order_id']) && isset($
     }
 }
 
-// Fetch Orders for this Seller
-// Grouping by Order ID to show one row per order, with items concatenated
-$sql = "
+// Fetch Regular Orders for this Seller (Excluding Scheduled)
+$sql_regular = "
     SELECT 
         o.order_id, 
         o.created_at, 
@@ -64,12 +63,12 @@ $sql = "
     JOIN users u ON o.user_id = u.user_id
     JOIN order_items oi ON o.order_id = oi.order_id
     JOIN foods f ON oi.food_id = f.id
-    WHERE f.seller_id = ?
+    WHERE f.seller_id = ? AND o.status != 'Scheduled'
     GROUP BY o.order_id
     ORDER BY o.created_at DESC
 ";
 
-$stmt = $conn->prepare($sql);
+$stmt = $conn->prepare($sql_regular);
 $stmt->bind_param("i", $seller_id);
 $stmt->execute();
 $result = $stmt->get_result();
@@ -78,6 +77,36 @@ while ($row = $result->fetch_assoc()) {
     $orders[] = $row;
 }
 $stmt->close();
+
+// Fetch Upcoming Scheduled Orders for this Seller
+$sql_scheduled = "
+    SELECT 
+        o.order_id, 
+        o.created_at, 
+        o.delivery_date,
+        o.status, 
+        o.total_amount, 
+        u.name as customer_name,
+        u.phone as customer_phone,
+        GROUP_CONCAT(CONCAT(f.name, ' (x', oi.quantity, ')') SEPARATOR ', ') as items_summary
+    FROM orders o
+    JOIN users u ON o.user_id = u.user_id
+    JOIN order_items oi ON o.order_id = oi.order_id
+    JOIN foods f ON oi.food_id = f.id
+    WHERE f.seller_id = ? AND o.status = 'Scheduled'
+    GROUP BY o.order_id
+    ORDER BY o.delivery_date ASC
+";
+
+$stmt_sched = $conn->prepare($sql_scheduled);
+$stmt_sched->bind_param("i", $seller_id);
+$stmt_sched->execute();
+$result_sched = $stmt_sched->get_result();
+$scheduled_orders = [];
+while ($row = $result_sched->fetch_assoc()) {
+    $scheduled_orders[] = $row;
+}
+$stmt_sched->close();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -120,6 +149,25 @@ $stmt->close();
         .btn-update:hover { background: #219150; }
         
         select.status-select { padding: 8px; border-radius: 6px; border: 1px solid #ddd; outline: none; margin-right: 10px; }
+
+        /* Tabs Pricing */
+        .tabs { display: flex; gap: 15px; margin-bottom: 25px; border-bottom: 2px solid #eee; padding-bottom: 15px; }
+        .tab-btn { padding: 10px 20px; font-weight: 600; font-size: 1rem; border: none; background: transparent; color: var(--text-muted); cursor: pointer; border-radius: 30px; transition: 0.3s; }
+        .tab-btn.active { background: #e8f5e9; color: var(--primary-color); }
+        .tab-btn:hover:not(.active) { background: #f0f0f0; color: #333; }
+        
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        
+        .scheduled-badge { background: #fff3e0; color: #f57c00; padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; display: inline-flex; align-items: center; gap: 5px; border: 1px solid #ffe0b2; }
+
+        /* Date Filters */
+        .date-filters { display: flex; gap: 10px; margin-bottom: 20px; overflow-x: auto; padding-bottom: 8px; }
+        .date-btn { padding: 8px 16px; border-radius: 20px; border: 1px solid #e0e0e0; background: #fff; color: #555; cursor: pointer; font-size: 0.9rem; font-weight: 500; white-space: nowrap; transition: 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .date-btn:hover { border-color: var(--primary-color); color: var(--primary-color); }
+        .date-btn.active { background: #e8f5e9; border-color: var(--primary-color); color: var(--primary-color); font-weight: 600; }
+        .date-filters::-webkit-scrollbar { height: 4px; }
+        .date-filters::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
     </style>
 </head>
 <body>
@@ -150,63 +198,144 @@ $stmt->close();
             <?php endif; ?>
 
             <div class="page-header">
-                <h2>Customer Orders</h2>
+                <h2>Manage Orders</h2>
             </div>
             
-            <?php if (count($orders) > 0): ?>
-                <?php foreach($orders as $order): ?>
-                <div class="order-card">
-                    <div class="order-header">
-                        <div>
-                            <div class="order-id">Order #HB-<?php echo 1000 + $order['order_id']; ?></div>
-                            <div class="order-date"><i class="fa-regular fa-clock"></i> <?php echo date('M d, Y h:i A', strtotime($order['created_at'])); ?></div>
+            <div class="tabs">
+                <button class="tab-btn active" onclick="switchTab('active')">Active Orders (<?php echo count($orders); ?>)</button>
+                <button class="tab-btn" onclick="switchTab('scheduled')">Upcoming Scheduled (<?php echo count($scheduled_orders); ?>)</button>
+            </div>
+            
+            <!-- ACTIVE ORDERS TAB -->
+            <div id="tab-active" class="tab-content active">
+                <?php if (count($orders) > 0): ?>
+                    <?php foreach($orders as $order): ?>
+                    <div class="order-card">
+                        <div class="order-header">
+                            <div>
+                                <div class="order-id">Order #HB-<?php echo 1000 + $order['order_id']; ?></div>
+                                <div class="order-date"><i class="fa-regular fa-clock"></i> <?php echo date('M d, Y h:i A', strtotime($order['created_at'])); ?></div>
+                            </div>
+                            <div style="text-align: right; display:flex; flex-direction:column; align-items:flex-end; gap:5px;">
+                                <div class="customer-info"><i class="fa-solid fa-user"></i> <?php echo htmlspecialchars($order['customer_name']); ?></div>
+                                <?php if(!empty($order['customer_phone'])): ?>
+                                    <div style="display:flex; align-items:center; gap:8px;">
+                                        <a href="tel:<?php echo htmlspecialchars($order['customer_phone']); ?>" class="call-btn" style="text-decoration:none; padding:4px 10px; border-radius:4px; font-size:0.85rem; background:#eff6ff; color:#3b82f6; border:1px solid #bfdbfe;"><i class="fa-solid fa-phone"></i> Call</a>
+                                        <button type="button" onclick="copyToClipboard('<?php echo htmlspecialchars($order['customer_phone']); ?>')" style="cursor: pointer; padding:4px 10px; border-radius:4px; font-size:0.85rem; background: #f8fafc; color: #475569; border: 1px solid #cbd5e1;"><i class="fa-regular fa-copy"></i> Copy</button>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
                         </div>
-                        <div style="text-align: right; display:flex; flex-direction:column; align-items:flex-end; gap:5px;">
-                            <div class="customer-info"><i class="fa-solid fa-user"></i> <?php echo htmlspecialchars($order['customer_name']); ?></div>
-                            <?php if(!empty($order['customer_phone'])): ?>
-                                <div style="display:flex; align-items:center; gap:8px;">
-                                    <a href="tel:<?php echo htmlspecialchars($order['customer_phone']); ?>" class="call-btn" style="text-decoration:none; padding:4px 10px; border-radius:4px; font-size:0.85rem; background:#eff6ff; color:#3b82f6; border:1px solid #bfdbfe;"><i class="fa-solid fa-phone"></i> Call</a>
-                                    <button type="button" onclick="copyToClipboard('<?php echo htmlspecialchars($order['customer_phone']); ?>')" style="cursor: pointer; padding:4px 10px; border-radius:4px; font-size:0.85rem; background: #f8fafc; color: #475569; border: 1px solid #cbd5e1;"><i class="fa-regular fa-copy"></i> Copy</button>
-                                </div>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-                    
-                    <div class="order-items">
-                        <strong>Items:</strong> <?php echo htmlspecialchars($order['items_summary']); ?>
-                    </div>
-                    
-                    <div class="order-footer">
-                        <div class="total-price">Total: ₹<?php echo number_format($order['total_amount'], 2); ?></div>
                         
-                        <div class="status-actions">
-                            <?php
-                                $s = strtolower($order['status']);
-                                $class = 'status-pending';
-                                if(strpos($s, 'prepar') !== false) $class = 'status-preparing';
-                                if(strpos($s, 'ready') !== false) $class = 'status-ready';
-                                if(strpos($s, 'complet') !== false || strpos($s, 'deliver') !== false) $class = 'status-completed';
-                            ?>
-                            <span class="current-status <?php echo $class; ?>"><?php echo htmlspecialchars($order['status']); ?></span>
+                        <div class="order-items">
+                            <strong>Items:</strong> <?php echo htmlspecialchars($order['items_summary']); ?>
+                        </div>
+                        
+                        <div class="order-footer">
+                            <div class="total-price">Total: ₹<?php echo number_format($order['total_amount'], 2); ?></div>
                             
-                            <form method="POST" style="display: flex; align-items: center;">
-                                <input type="hidden" name="order_id" value="<?php echo $order['order_id']; ?>">
-                                <select name="status" class="status-select">
-                                    <option value="Preparing" <?php if($order['status']=='Preparing') echo 'selected'; ?>>Preparing</option>
-                                    <option value="Ready for Pickup" <?php if($order['status']=='Ready for Pickup') echo 'selected'; ?>>Ready for Pickup</option>
-                                    <option value="Out for Delivery" <?php if($order['status']=='Out for Delivery') echo 'selected'; ?>>Out for Delivery</option>
-                                    <option value="Delivered" <?php if($order['status']=='Delivered') echo 'selected'; ?>>Delivered</option>
-                                    <option value="Cancelled" <?php if($order['status']=='Cancelled') echo 'selected'; ?>>Cancelled</option>
-                                </select>
-                                <button type="submit" class="btn-update">Update</button>
-                            </form>
+                            <div class="status-actions">
+                                <?php
+                                    $s = strtolower($order['status']);
+                                    $class = 'status-pending';
+                                    if(strpos($s, 'prepar') !== false) $class = 'status-preparing';
+                                    if(strpos($s, 'ready') !== false) $class = 'status-ready';
+                                    if(strpos($s, 'complet') !== false || strpos($s, 'deliver') !== false) $class = 'status-completed';
+                                ?>
+                                <span class="current-status <?php echo $class; ?>"><?php echo htmlspecialchars($order['status']); ?></span>
+                                
+                                <form method="POST" style="display: flex; align-items: center;">
+                                    <input type="hidden" name="order_id" value="<?php echo $order['order_id']; ?>">
+                                    <select name="status" class="status-select">
+                                        <option value="Preparing" <?php if($order['status']=='Preparing') echo 'selected'; ?>>Preparing</option>
+                                        <option value="Ready for Pickup" <?php if($order['status']=='Ready for Pickup') echo 'selected'; ?>>Ready for Pickup</option>
+                                        <option value="Out for Delivery" <?php if($order['status']=='Out for Delivery') echo 'selected'; ?>>Out for Delivery</option>
+                                        <option value="Delivered" <?php if($order['status']=='Delivered') echo 'selected'; ?>>Delivered</option>
+                                        <option value="Cancelled" <?php if($order['status']=='Cancelled') echo 'selected'; ?>>Cancelled</option>
+                                    </select>
+                                    <button type="submit" class="btn-update">Update</button>
+                                </form>
+                            </div>
                         </div>
                     </div>
-                </div>
-                <?php endforeach; ?>
-            <?php else: ?>
-                <div style="text-align: center; color: #999; padding: 40px; font-style: italic;">No orders found yet.</div>
-            <?php endif; ?>
+                    <?php endforeach; ?>
+                <?php else: ?>
+                    <div style="text-align: center; color: #999; padding: 40px; font-style: italic;">No active orders found.</div>
+                <?php endif; ?>
+            </div>
+
+            <!-- SCHEDULED ORDERS TAB -->
+            <div id="tab-scheduled" class="tab-content">
+                <?php if (count($scheduled_orders) > 0): ?>
+                    <?php
+                    // Extract unique dates for filter buttons
+                    $unique_dates = [];
+                    foreach ($scheduled_orders as $o) {
+                        $date_only = date('Y-m-d', strtotime($o['delivery_date']));
+                        if (!in_array($date_only, $unique_dates)) {
+                            $unique_dates[] = $date_only;
+                        }
+                    }
+                    sort($unique_dates);
+                    ?>
+                    
+                    <div class="date-filters">
+                        <button class="date-btn active" onclick="filterByDate('all', this)">All Dates</button>
+                        <?php foreach($unique_dates as $udate): ?>
+                            <button class="date-btn" onclick="filterByDate('<?php echo $udate; ?>', this)">
+                                <?php 
+                                    $today = date('Y-m-d');
+                                    $tomorrow = date('Y-m-d', strtotime('+1 day'));
+                                    if ($udate === $today) echo "Today";
+                                    elseif ($udate === $tomorrow) echo "Tomorrow";
+                                    else echo date('M d, Y', strtotime($udate));
+                                ?>
+                            </button>
+                        <?php endforeach; ?>
+                    </div>
+
+                    <?php foreach($scheduled_orders as $order): ?>
+                    <div class="order-card scheduled-card" data-date="<?php echo date('Y-m-d', strtotime($order['delivery_date'])); ?>" style="border-left: 4px solid #f57c00;">
+                        <div class="order-header">
+                            <div>
+                                <div class="order-id">Order #HB-<?php echo 1000 + $order['order_id']; ?></div>
+                                <div style="margin-top: 8px;">
+                                    <span class="scheduled-badge"><i class="fa-regular fa-calendar-check"></i> Due: <?php echo date('M d, Y h:i A', strtotime($order['delivery_date'])); ?></span>
+                                </div>
+                            </div>
+                            <div style="text-align: right; display:flex; flex-direction:column; align-items:flex-end; gap:5px;">
+                                <div class="customer-info"><i class="fa-solid fa-user"></i> <?php echo htmlspecialchars($order['customer_name']); ?></div>
+                                <?php if(!empty($order['customer_phone'])): ?>
+                                    <div style="display:flex; align-items:center; gap:8px;">
+                                        <a href="tel:<?php echo htmlspecialchars($order['customer_phone']); ?>" class="call-btn" style="text-decoration:none; padding:4px 10px; border-radius:4px; font-size:0.85rem; background:#eff6ff; color:#3b82f6; border:1px solid #bfdbfe;"><i class="fa-solid fa-phone"></i> Call</a>
+                                        <button type="button" onclick="copyToClipboard('<?php echo htmlspecialchars($order['customer_phone']); ?>')" style="cursor: pointer; padding:4px 10px; border-radius:4px; font-size:0.85rem; background: #f8fafc; color: #475569; border: 1px solid #cbd5e1;"><i class="fa-regular fa-copy"></i> Copy</button>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                        
+                        <div class="order-items">
+                            <strong>Items:</strong> <?php echo htmlspecialchars($order['items_summary']); ?>
+                        </div>
+                        
+                        <div class="order-footer">
+                            <div class="total-price">Total: ₹<?php echo number_format($order['total_amount'], 2); ?></div>
+                            
+                            <div class="status-actions">
+                                <form method="POST" style="display: flex; align-items: center;">
+                                    <input type="hidden" name="order_id" value="<?php echo $order['order_id']; ?>">
+                                    <input type="hidden" name="status" value="Preparing">
+                                    <button type="submit" class="btn-update" style="background:#f57c00; white-space: nowrap;"><i class="fa-solid fa-fire-burner"></i> Start Preparing Now</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    <?php endforeach; ?>
+                <?php else: ?>
+                    <div style="text-align: center; color: #999; padding: 40px; font-style: italic;">No upcoming scheduled orders.</div>
+                <?php endif; ?>
+            </div>
+
         </div>
     </div>
     <script>
@@ -217,6 +346,31 @@ $stmt->close();
                 alert('Phone number copied: ' + text);
             }).catch(err => {
                 console.error('Failed to copy: ', err);
+            });
+        }
+
+        function switchTab(tabId) {
+            // Remove active class from all buttons and contents
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            // Add active class to clicked button and corresponding content
+            event.currentTarget.classList.add('active');
+            document.getElementById('tab-' + tabId).classList.add('active');
+        }
+
+        function filterByDate(dateStr, btnElement) {
+            // Update active button state
+            document.querySelectorAll('.date-btn').forEach(btn => btn.classList.remove('active'));
+            btnElement.classList.add('active');
+
+            // Find all scheduled order cards and toggle visibility
+            document.querySelectorAll('.scheduled-card').forEach(card => {
+                if (dateStr === 'all' || card.getAttribute('data-date') === dateStr) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
             });
         }
     </script>
