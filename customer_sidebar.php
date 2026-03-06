@@ -375,4 +375,24 @@ if ($is_delivery_approved) {
             closeReactivateModal();
         }
     });
+
+    // --- Automated Stale Order Cancellation (Option A) ---
+    // Pings api_cron_stale.php every 60 seconds to silently cancel unresponsive orders
+    setInterval(() => {
+        fetch('api_cron_stale.php')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.message && !data.message.includes('0 stale orders')) {
+                    // We successfully cancelled some orders! We can silently reload to update counts, 
+                    // but silently succeeding is fine as the customer will see notifications.
+                    console.log('Automated Cancellation:', data.message);
+                }
+            })
+            .catch(error => console.error('Error triggering automated cancellations:', error));
+    }, 60000);
+    
+    // Run it once immediately on page load just in case
+    setTimeout(() => {
+        fetch('api_cron_stale.php').catch(e => console.log(e));
+    }, 2000);
 </script>
