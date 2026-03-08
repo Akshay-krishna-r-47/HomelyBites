@@ -35,8 +35,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_status'])) {
                 $stmt_earn = $conn->prepare($earn_sql);
                 $stmt_earn->bind_param("iid", $delivery_id, $order_id, $flat_fee);
                 $stmt_earn->execute();
-                $stmt_earn->execute();
+                $stmt_earn->close();
             }
+            
+            // Notify Customer of Status Change
+            $cust_sql = "SELECT user_id FROM orders WHERE order_id = ?";
+            $cust_stmt = $conn->prepare($cust_sql);
+            $cust_stmt->bind_param("i", $order_id);
+            $cust_stmt->execute();
+            $cust_res = $cust_stmt->get_result()->fetch_assoc();
+            if ($cust_res) {
+                $title = "Delivery Update";
+                $msg = "Your Order #$order_id is now: " . htmlspecialchars($new_status) . ".";
+                $type = ($new_status === 'Delivered') ? "success" : "info";
+                send_notification($conn, $cust_res['user_id'], $title, $msg, $type);
+            }
+            $cust_stmt->close();
+
             $message = "Order status updated to " . htmlspecialchars($new_status) . "!";
             $message_type = "success";
         }

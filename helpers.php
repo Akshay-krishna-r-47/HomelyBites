@@ -90,4 +90,23 @@ if (!function_exists('log_activity')) {
         }
     }
 }
+if (!function_exists('send_notification')) {
+    /**
+     * Sends a notification to a specific user.
+     * 
+     * @param mysqli $conn
+     * @param int $user_id
+     * @param string $title
+     * @param string $message
+     * @param string $type
+     */
+    function send_notification($conn, $user_id, $title, $message, $type = 'info') {
+        $stmt = $conn->prepare("INSERT INTO notifications (user_id, title, message, type) VALUES (?, ?, ?, ?)");
+        if ($stmt) {
+            $stmt->bind_param("isss", $user_id, $title, $message, $type);
+            $stmt->execute();
+            $stmt->close();
+        }
+    }
+}
 ?>

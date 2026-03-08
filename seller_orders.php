@@ -36,6 +36,20 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['order_id']) && isset($
                 triggerDriverAssignment($conn, $order_id);
             }
             
+            // Notify Customer of Status Change
+            $cust_sql = "SELECT user_id FROM orders WHERE order_id = ?";
+            $cust_stmt = $conn->prepare($cust_sql);
+            $cust_stmt->bind_param("i", $order_id);
+            $cust_stmt->execute();
+            $cust_res = $cust_stmt->get_result()->fetch_assoc();
+            if ($cust_res) {
+                $title = "Order Status Updated";
+                $msg = "Your Order #$order_id is now: " . htmlspecialchars($new_status) . ".";
+                $type = ($new_status === 'Ready for Pickup') ? "success" : "info";
+                send_notification($conn, $cust_res['user_id'], $title, $msg, $type);
+            }
+            $cust_stmt->close();
+            
             // Redirect to avoid resubmission
             header("Location: seller_orders.php?msg=updated");
             exit();

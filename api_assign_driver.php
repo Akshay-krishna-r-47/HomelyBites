@@ -3,6 +3,7 @@
 // Called internally when seller clicks "Ready for Pickup", or when a previous driver rejects.
 
 include_once 'db_connect.php';
+include_once 'helpers.php';
 
 function triggerDriverAssignment($conn, $order_id) {
     // 1. Find all online drivers who haven't rejected or timed out on this order
@@ -35,6 +36,10 @@ function triggerDriverAssignment($conn, $order_id) {
                                   VALUES (?, ?, 'Pending', NOW(), DATE_ADD(NOW(), INTERVAL 20 SECOND))");
         $insert->bind_param("ii", $order_id, $target_driver_id);
         if($insert->execute()) {
+            $title = "New Delivery Request!";
+            $message = "You have a new delivery request for Order #$order_id. Please accept or reject quickly.";
+            send_notification($conn, $target_driver_id, $title, $message, "warning");
+            
             return true;
         }
     } else {

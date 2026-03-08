@@ -1,6 +1,7 @@
 <?php
 session_start();
 include 'db_connect.php';
+include_once 'helpers.php';
 
 if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");
@@ -131,6 +132,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $stmt_clear->execute();
     $stmt_clear->close();
     
+    // Notify Sellers about their new orders
+    $customer_name_stmt = $conn->prepare("SELECT name FROM users WHERE user_id = ?");
+    $customer_name_stmt->bind_param("i", $user_id);
+    $customer_name_stmt->execute();
+    $c_result = $customer_name_stmt->get_result();
+    $c_name = $c_result->fetch_assoc()['name'] ?? 'A customer';
+    $customer_name_stmt->close();
+    
+    foreach ($orders_by_seller as $seller_id => $order_data) {
+        $title = "New Order Received!";
+        $message = "You have a new " . $status . " order perfectly placed by " . htmlspecialchars($c_name) . "!";
+        send_notification($conn, $seller_id, $title, $message, "success");
+    }
+
     // 5. Redirect to Confirmation
     header("Location: order_confirmation.php");
     exit();

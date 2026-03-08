@@ -100,11 +100,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 if ($new_image) {
                     $sql = "UPDATE foods SET name=?, price=?, category=?, status=?, image=?, stock=?, avail_slot1_start=?, avail_slot1_end=?, avail_slot2_start=?, avail_slot2_end=? WHERE id=? AND seller_id=?";
                     $stmt = $conn->prepare($sql);
-                    $stmt->bind_param("sdsssISSSSII", $name, $price, $category, $status, $new_image, $stock, $avail_slot1_start, $avail_slot1_end, $avail_slot2_start, $avail_slot2_end, $food_id, $seller_id);
+                    $stmt->bind_param("sdsssissssii", $name, $price, $category, $status, $new_image, $stock, $avail_slot1_start, $avail_slot1_end, $avail_slot2_start, $avail_slot2_end, $food_id, $seller_id);
                 } else {
                     $sql = "UPDATE foods SET name=?, price=?, category=?, status=?, stock=?, avail_slot1_start=?, avail_slot1_end=?, avail_slot2_start=?, avail_slot2_end=? WHERE id=? AND seller_id=?";
                     $stmt = $conn->prepare($sql);
-                    $stmt->bind_param("sdssiSSSSii", $name, $price, $category, $status, $stock, $avail_slot1_start, $avail_slot1_end, $avail_slot2_start, $avail_slot2_end, $food_id, $seller_id);
+                    $stmt->bind_param("sdssissssii", $name, $price, $category, $status, $stock, $avail_slot1_start, $avail_slot1_end, $avail_slot2_start, $avail_slot2_end, $food_id, $seller_id);
                 }
 
                 if ($stmt->execute()) {

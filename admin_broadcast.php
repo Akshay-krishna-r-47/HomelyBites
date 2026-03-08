@@ -43,6 +43,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 $sql = "SELECT user_id FROM users WHERE seller_approved = 1";
             } elseif ($target_group == 'delivery') {
                 $sql = "SELECT user_id FROM users WHERE delivery_approved = 1";
+            } elseif ($target_group == 'specific') {
+                $specific_email = trim($_POST['specific_email']);
+                if (empty($specific_email)) {
+                    $msg = "Email is required for specific user broadcast.";
+                    $msg_type = "error";
+                } else {
+                    $sql = "SELECT user_id FROM users WHERE email = ?";
+                }
             } else {
                 // Customer - basically everyone who is not banned? Or just everyone.
                 // Strictly speaking everyone is a customer.
@@ -53,22 +61,32 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             }
         }
 
-        $recipients = $conn->query($sql);
-        $count = 0;
-        if ($recipients) {
-            $stmt = $conn->prepare("INSERT INTO notifications (user_id, title, message, type) VALUES (?, ?, ?, ?)");
-            while ($row = $recipients->fetch_assoc()) {
-                $uid = $row['user_id'];
-                $stmt->bind_param("isss", $uid, $title, $message_body, $type);
-                $stmt->execute();
-                $count++;
+        if (empty($msg)) { // Only proceed if no validation errors from specific email
+            if ($target_group == 'specific') {
+                $stmt_spec = $conn->prepare($sql);
+                $stmt_spec->bind_param("s", $specific_email);
+                $stmt_spec->execute();
+                $recipients = $stmt_spec->get_result();
+            } else {
+                $recipients = $conn->query($sql);
             }
-            $stmt->close();
-            $msg = "Broadcast sent successfully to $count users!";
-            $msg_type = "success";
-        } else {
-            $msg = "Error fetching recipients.";
-            $msg_type = "error";
+            
+            $count = 0;
+            if ($recipients && $recipients->num_rows > 0) {
+                $stmt = $conn->prepare("INSERT INTO notifications (user_id, title, message, type) VALUES (?, ?, ?, ?)");
+                while ($row = $recipients->fetch_assoc()) {
+                    $uid = $row['user_id'];
+                    $stmt->bind_param("isss", $uid, $title, $message_body, $type);
+                    $stmt->execute();
+                    $count++;
+                }
+                $stmt->close();
+                $msg = "Broadcast sent successfully to $count users!";
+                $msg_type = "success";
+            } else {
+                $msg = ($target_group == 'specific') ? "User not found." : "Error fetching recipients.";
+                $msg_type = "error";
+            }
         }
     }
 }
@@ -125,12 +143,18 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 <form method="POST">
                     <div class="form-group">
                         <label>Target Audience</label>
-                        <select name="target_group">
+                        <select name="target_group" id="target_group" onchange="toggleSpecificEmail()">
                             <option value="all">All Users</option>
                             <option value="seller">All Sellers</option>
                             <option value="delivery">All Delivery Partners</option>
                             <option value="admin">Other Admins</option>
+                            <option value="specific">Specific User</option>
                         </select>
+                    </div>
+                    
+                    <div class="form-group" id="specific_email_group" style="display: none;">
+                        <label>User Email</label>
+                        <input type="email" name="specific_email" placeholder="Enter user's email address">
                     </div>
 
                     <div class="form-group">
@@ -158,6 +182,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             </div>
         </div>
     </div>
-    <script>function toggleSidebar(){ document.querySelector('.sidebar').classList.toggle('collapsed'); }</script>
+    <script>
+        function toggleSidebar(){ document.querySelector('.sidebar').classList.toggle('collapsed'); }
+        function toggleSpecificEmail() {
+            var targetGroup = document.getElementById('target_group').value;
+            var emailGroup = document.getElementById('specific_email_group');
+            if (targetGroup === 'specific') {
+                emailGroup.style.display = 'block';
+            } else {
+                emailGroup.style.display = 'none';
+            }
+        }
+    </script>
 </body>
 </html>

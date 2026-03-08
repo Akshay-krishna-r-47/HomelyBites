@@ -1,6 +1,7 @@
 <?php
 session_start();
 include 'db_connect.php';
+include_once 'helpers.php';
 
 if (!isset($_SESSION['user_id'])) {
     echo json_encode(['success' => false, 'message' => 'Unauthorized']);
@@ -40,6 +41,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $updUser = $conn->prepare("UPDATE users SET active_orders = active_orders + 1 WHERE user_id = ?");
             $updUser->bind_param("i", $user_id);
             $updUser->execute();
+
+            // Fetch info for notifications
+            $info_sql = "SELECT o.user_id as customer_id, o.seller_id, d.name as driver_name 
+                         FROM orders o 
+                         JOIN users d ON d.user_id = ? 
+                         WHERE o.order_id = ?";
+            $info_stmt = $conn->prepare($info_sql);
+            $info_stmt->bind_param("ii", $user_id, $order_id);
+            $info_stmt->execute();
+            $info = $info_stmt->get_result()->fetch_assoc();
+            
+            if ($info) {
+                $driver_name_safe = htmlspecialchars($info['driver_name']);
+                
+                // Notify Customer
+                send_notification($conn, $info['customer_id'], "Delivery Partner Assigned", "Driver $driver_name_safe has been assigned to Order #$order_id and will pick up your food soon.", "info");
+                
+                // Notify Seller
+                send_notification($conn, $info['seller_id'], "Driver Assigned", "Driver $driver_name_safe has accepted the pickup for Order #$order_id.", "info");
+            }
 
             echo json_encode(['success' => true, 'redirect' => 'delivery_active.php']);
         } elseif ($action === 'reject') {
