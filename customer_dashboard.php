@@ -115,42 +115,73 @@ $user_profile_image = getProfileImage($_SESSION['user_id'], $conn);
         .btn-add { border: 1px solid #d4d5d9; color: #1ba672; background: white; padding: 6px 20px; border-radius: 4px; font-weight: 600; font-size: 13px; text-transform: uppercase; box-shadow: 0 1px 3px rgba(0,0,0,0.1); transition: all 0.2s; position: absolute; bottom: 16px; right: 16px; }
         .btn-add:hover { box-shadow: 0 2px 6px rgba(0,0,0,0.15); background: #f9f9f9; }
 
+        /* Swiggy Style Restaurant Grid */
+        .section-title { font-size: 24px; font-weight: 800; color: #111; margin-bottom: 25px; display: flex; align-items: center; gap: 10px; font-family: 'Poppins', sans-serif;}
+        
+        .food-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 30px 20px;
+            padding-bottom: 40px;
+        }
+
+        .restaurant-card {
+            background: transparent; border-radius: 16px; transition: transform 0.2s ease, filter 0.2s ease; position: relative; display: flex; flex-direction: column; cursor: pointer; text-decoration: none; color: inherit;
+        }
+        .restaurant-card:hover { transform: scale(0.98); }
+
+        .rest-img-container { position: relative; width: 100%; height: 180px; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-bottom: 12px; }
+        .rest-img { width: 100%; height: 100%; object-fit: cover; background-color: #f0f0f0; transition: transform 0.3s ease; }
+        .rest-overlay-gradient { position: absolute; bottom: 0; left: 0; right: 0; height: 60%; background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 100%); display: flex; align-items: flex-end; padding: 12px; }
+        .rest-offer { color: #fff; font-weight: 800; font-size: 1.1rem; text-shadow: 1px 1px 3px rgba(0,0,0,0.5); letter-spacing: -0.5px; }
+        
+        .rest-details { padding: 0 4px; flex: 1; display: flex; flex-direction: column; }
+        .rest-name { font-size: 18px; font-weight: 700; margin-bottom: 2px; text-transform: capitalize; color: #222; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        
+        .rest-meta-row { display: flex; align-items: center; gap: 6px; font-size: 0.9rem; font-weight: 600; color: #444; margin-bottom: 4px; }
+        .rating-star { background: var(--brand-green); color: white; border-radius: 50%; width: 18px; height: 18px; display: inline-flex; align-items: center; justify-content: center; font-size: 10px; }
+        
+        .rest-cuisines { font-size: 0.85rem; color: #777; font-weight: 400; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-bottom: 2px; }
+        .rest-location { font-size: 0.85rem; color: #777; font-weight: 400; }
         /* Category Filters */
         .category-filters {
             display: flex;
             gap: 12px;
             overflow-x: auto;
-            padding-bottom: 12px;
-            margin-bottom: 24px;
-            -ms-overflow-style: none; /* IE and Edge */
-            scrollbar-width: none; /* Firefox */
+            padding-bottom: 15px;
+            margin-bottom: 25px;
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
         }
         .category-filters::-webkit-scrollbar {
-            display: none;
+            display: none; /* Chrome, Safari and Opera */
         }
+        
         .category-pill {
             padding: 8px 20px;
+            border-radius: 50px;
             background: #fff;
             border: 1px solid #e0e0e0;
-            border-radius: 24px;
+            color: #555;
             font-size: 14px;
             font-weight: 500;
-            color: #555;
-            cursor: pointer;
-            white-space: nowrap;
-            transition: all 0.2s;
             text-decoration: none;
-            display: inline-block;
+            white-space: nowrap;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.02);
         }
+        
         .category-pill:hover {
-            border-color: var(--brand-green);
-            color: var(--brand-green);
-            background: #f0fdf4;
+            border-color: #ccc;
+            background: #f9f9f9;
+            color: #222;
         }
+
         .category-pill.active {
             background: var(--brand-green);
             color: #fff;
             border-color: var(--brand-green);
+            box-shadow: 0 4px 10px rgba(10, 143, 8, 0.2);
         }
 
         /* Empty State */
@@ -220,16 +251,13 @@ $user_profile_image = getProfileImage($_SESSION['user_id'], $conn);
 
             <!-- Recommended Section based on category -->
             <div class="section-header">
-                <h2 class="section-title"><?php echo $selected_category === 'all' ? 'Recommended to you' : htmlspecialchars($selected_category) . ' Items'; ?></h2>
-                <?php if ($selected_category === 'all'): ?>
-                    <a href="#" class="view-all">View All <i class="fa-solid fa-arrow-right"></i></a>
-                <?php endif; ?>
+                <h2 class="section-title">Restaurants with online food delivery near you</h2>
             </div>
 
             <!-- Categories -->
             <?php if (!empty($categories)): ?>
             <div class="category-filters">
-                <a href="customer_dashboard.php?category=all" class="category-pill <?php echo $selected_category === 'all' ? 'active' : ''; ?>">All</a>
+                <a href="customer_dashboard.php?category=all" class="category-pill <?php echo $selected_category === 'all' ? 'active' : ''; ?>">All Cuisines</a>
                 <?php foreach($categories as $cat): ?>
                     <a href="customer_dashboard.php?category=<?php echo urlencode($cat); ?>" class="category-pill <?php echo $selected_category === $cat ? 'active' : ''; ?>">
                         <?php echo htmlspecialchars($cat); ?>
@@ -240,108 +268,115 @@ $user_profile_image = getProfileImage($_SESSION['user_id'], $conn);
 
             <div class="food-grid">
                 <?php
+                // Fetch customer's coordinates to calculate distance
+                $customer_lat = null;
+                $customer_lng = null;
+                $cust_stmt = $conn->prepare("SELECT latitude, longitude FROM users WHERE user_id = ?");
+                $cust_stmt->bind_param("i", $_SESSION['user_id']);
+                $cust_stmt->execute();
+                $cust_res = $cust_stmt->get_result();
+                if ($cust_row = $cust_res->fetch_assoc()) {
+                    $customer_lat = $cust_row['latitude'];
+                    $customer_lng = $cust_row['longitude'];
+                }
+                $cust_stmt->close();
+
+                // Haversine formula to calculate distance in km
+                function getDistance($lat1, $lon1, $lat2, $lon2) {
+                    if (!$lat1 || !$lon1 || !$lat2 || !$lon2) return null;
+                    $earth_radius = 6371; // km
+                    $dLat = deg2rad($lat2 - $lat1);
+                    $dLon = deg2rad($lon2 - $lon1);
+                    $a = sin($dLat/2) * sin($dLat/2) + cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * sin($dLon/2) * sin($dLon/2);
+                    $c = 2 * asin(sqrt($a));
+                    return $earth_radius * $c;
+                }
+
+                // Fetch Sellers (Restaurants) instead of individual foods
                 if ($selected_category !== 'all') {
-                    $rec_sql = "SELECT id, name, price, image, category, stock, avail_slot1_start, avail_slot1_end, avail_slot2_start, avail_slot2_end FROM foods WHERE status = 'Available' AND is_deleted = 0 AND category = ? ORDER BY id DESC LIMIT 50";
+                    $rec_sql = "SELECT DISTINCT u.user_id, COALESCE(sa.business_name, u.name) as seller_name, u.city, u.current_offer, u.latitude, u.longitude,
+                                (SELECT AVG(seller_rating) FROM orders WHERE seller_id = u.user_id AND seller_rating IS NOT NULL) as avg_rating,
+                                (SELECT image FROM foods WHERE seller_id = u.user_id AND status = 'Available' AND is_deleted = 0 AND image != '' ORDER BY id DESC LIMIT 1) as cover_image,
+                                (SELECT GROUP_CONCAT(DISTINCT category SEPARATOR ', ') FROM foods WHERE seller_id = u.user_id AND status = 'Available' AND is_deleted = 0) as cuisines
+                                FROM users u 
+                                JOIN foods f ON u.user_id = f.seller_id 
+                                LEFT JOIN seller_applications sa ON u.user_id = sa.user_id AND sa.status = 'Approved'
+                                WHERE f.category = ? AND f.status = 'Available' AND f.is_deleted = 0";
                     $stmt = $conn->prepare($rec_sql);
                     if ($stmt) {
                         $stmt->bind_param("s", $selected_category);
                     }
                 } else {
-                    $rec_sql = "SELECT id, name, price, image, category, stock, avail_slot1_start, avail_slot1_end, avail_slot2_start, avail_slot2_end FROM foods WHERE status = 'Available' AND is_deleted = 0 ORDER BY id DESC LIMIT 12";
+                    $rec_sql = "SELECT DISTINCT u.user_id, COALESCE(sa.business_name, u.name) as seller_name, u.city, u.current_offer, u.latitude, u.longitude,
+                                (SELECT AVG(seller_rating) FROM orders WHERE seller_id = u.user_id AND seller_rating IS NOT NULL) as avg_rating,
+                                (SELECT image FROM foods WHERE seller_id = u.user_id AND status = 'Available' AND is_deleted = 0 AND image != '' ORDER BY id DESC LIMIT 1) as cover_image,
+                                (SELECT GROUP_CONCAT(DISTINCT category SEPARATOR ', ') FROM foods WHERE seller_id = u.user_id AND status = 'Available' AND is_deleted = 0) as cuisines
+                                FROM users u 
+                                JOIN foods f ON u.user_id = f.seller_id 
+                                LEFT JOIN seller_applications sa ON u.user_id = sa.user_id AND sa.status = 'Approved'
+                                WHERE f.status = 'Available' AND f.is_deleted = 0";
                     $stmt = $conn->prepare($rec_sql);
                 }
 
                 if ($stmt) {
                     $stmt->execute();
                     $result = $stmt->get_result();
-                    
+
                     if ($result->num_rows > 0) {
                         while ($row = $result->fetch_assoc()) {
-                            $f_name = htmlspecialchars($row['name']);
-                            $f_price = htmlspecialchars($row['price']);
-                            $f_image = $row['image'];
-                            $f_cat = isset($row['category']) ? htmlspecialchars($row['category']) : 'Delicious';
-                            $f_stock = (int)$row['stock'];
+                            $s_id = $row['user_id'];
+                            $s_name = htmlspecialchars($row['seller_name']);
+                            $s_city = htmlspecialchars($row['city'] ? $row['city'] : 'Local Area');
                             
-                            // Time Slot Logic
-                            $is_time_available = true;
-                            $availability_message = "";
+                            // Prevent overflowing string of cuisines, show 3 max roughly
+                            $cuisines_array = explode(", ", $row['cuisines']);
+                            $s_cuisines = implode(", ", array_slice(array_unique($cuisines_array), 0, 4));
+
+                            $s_rating = !empty($row['avg_rating']) ? number_format($row['avg_rating'], 1) : "New";
                             
-                            $s1_start = $row['avail_slot1_start'];
-                            $s1_end = $row['avail_slot1_end'];
-                            $s2_start = $row['avail_slot2_start'];
-                            $s2_end = $row['avail_slot2_end'];
-                            
-                            if (!empty($s1_start) || !empty($s2_start)) {
-                                $current_time = date('H:i:s');
-                                $in_slot1 = (!empty($s1_start) && !empty($s1_end) && $current_time >= $s1_start && $current_time <= $s1_end);
-                                $in_slot2 = (!empty($s2_start) && !empty($s2_end) && $current_time >= $s2_start && $current_time <= $s2_end);
-                                
-                                if (!$in_slot1 && !$in_slot2) {
-                                    $is_time_available = false;
-                                    // Build helpful message
-                                    $mssg = [];
-                                    if(!empty($s1_start)) $mssg[] = date('h:i A', strtotime($s1_start)) . " - " . date('h:i A', strtotime($s1_end));
-                                    if(!empty($s2_start)) $mssg[] = date('h:i A', strtotime($s2_start)) . " - " . date('h:i A', strtotime($s2_end));
-                                    $availability_message = "Available: " . implode(" & ", $mssg);
-                                }
+                            $s_image = $row['cover_image'];
+                            if (empty($s_image) || !file_exists($s_image)) {
+                                $s_image = 'assets/images/image-coming-soon.png';
                             }
-                            
-                            // Fallback image logic - Updated to image-coming-soon.png
-                            if (empty($f_image) || !file_exists($f_image)) {
-                                $f_image = 'assets/images/image-coming-soon.png';
+                            // Calculate a realistic delivery time based on distance (assume ~3 mins per km + 20 min base prep time)
+                            $min_time = 30; // Default min time
+                            $max_time = 45; // Default max time
+                            $dist_km = getDistance($customer_lat, $customer_lng, $row['latitude'], $row['longitude']);
+                            if ($dist_km !== null) {
+                                $prep_time = 20; // 20 mins standard prep
+                                $travel_time = round($dist_km * 3); // 3 mins per km
+                                $min_time = $prep_time + $travel_time;
+                                $max_time = $min_time + 10; // add a 10 min upper buffer
                             }
+
+                            $offer_text = !empty($row['current_offer']) ? htmlspecialchars($row['current_offer']) : '';
                             ?>
-                            <div class="food-card" style="display:flex; flex-direction:column; height:100%;">
-                                <a href="food_details.php?id=<?php echo $row['id']; ?>" style="text-decoration: none; color: inherit; display: block; flex:1;">
-                                    <img src="<?php echo $f_image; ?>" alt="<?php echo $f_name; ?>" class="food-img">
-                                    <div class="food-details">
-                                        <div class="food-name"><?php echo $f_name; ?></div>
-                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                            <div class="food-cat" style="margin-bottom: 0;"><?php echo $f_cat; ?></div>
-                                            <?php if ($f_stock > 0): ?>
-                                                <span style="font-size: 0.75rem; font-weight: 600; color: #0a8f08; background: #e8f5e9; padding: 2px 8px; border-radius: 12px;"><?php echo $f_stock; ?> left</span>
-                                            <?php else: ?>
-                                                <span style="font-size: 0.75rem; font-weight: 600; color: #d32f2f; background: #ffebee; padding: 2px 8px; border-radius: 12px;">Sold Out</span>
-                                            <?php endif; ?>
-                                        </div>
-                                        
-                                        <div class="food-footer" style="flex-wrap: wrap; gap: 5px;">
-                                            <div class="food-price">₹<?php echo $f_price; ?></div>
-                                            <?php if(!$is_time_available): ?>
-                                                <div style="width: 100%; font-size: 0.75rem; color: #f57c00; font-weight: 600; margin-top: 4px;">
-                                                    <i class="fa-regular fa-clock"></i> <?php echo $availability_message; ?>
-                                                </div>
-                                            <?php endif; ?>
-                                        </div>
+                            <a href="restaurant_menu.php?seller_id=<?php echo $s_id; ?>" class="restaurant-card">
+                                <div class="rest-img-container">
+                                    <img src="<?php echo $s_image; ?>" alt="<?php echo $s_name; ?>" class="rest-img">
+                                    <?php if (!empty($offer_text)): ?>
+                                    <div class="rest-overlay-gradient">
+                                        <div class="rest-offer"><?php echo $offer_text; ?></div>
                                     </div>
-                                </a>
-                                <div style="padding: 0 16px 16px 16px;">
-                                    <?php if (!$is_time_available): ?>
-                                        <button disabled style="width:100%; padding: 8px; background:#fff3e0; border:1px solid #ffe0b2; color:#f57c00; border-radius:4px; font-weight:600; cursor:not-allowed;">
-                                            CURRENTLY UNAVAILABLE
-                                        </button>
-                                    <?php elseif ($f_stock > 0): ?>
-                                        <form action="handle_cart.php" method="POST">
-                                            <input type="hidden" name="food_id" value="<?php echo $row['id']; ?>">
-                                            <button type="submit" name="action" value="add" style="width:100%; padding: 8px; background:white; border:1px solid #0a8f08; color:#0a8f08; border-radius:4px; font-weight:600; cursor:pointer;" onmouseover="this.style.background='#0a8f08'; this.style.color='white';" onmouseout="this.style.background='white'; this.style.color='#0a8f08';">
-                                                ADD TO CART
-                                            </button>
-                                        </form>
-                                    <?php else: ?>
-                                        <button disabled style="width:100%; padding: 8px; background:#f5f5f5; border:1px solid #ddd; color:#999; border-radius:4px; font-weight:600; cursor:not-allowed;">
-                                            OUT OF STOCK
-                                        </button>
                                     <?php endif; ?>
                                 </div>
-                            </div>
+                                <div class="rest-details">
+                                    <div class="rest-name"><?php echo $s_name; ?></div>
+                                    <div class="rest-meta-row">
+                                        <div class="rating-star"><i class="fa-solid fa-star"></i></div>
+                                        <span><?php echo $s_rating; ?> • <?php echo $min_time; ?>-<?php echo $max_time; ?> mins</span>
+                                    </div>
+                                    <div class="rest-cuisines"><?php echo rtrim($s_cuisines, ', '); ?></div>
+                                    <div class="rest-location"><?php echo $s_city; ?></div>
+                                </div>
+                            </a>
                             <?php
                         }
                     } else {
                         ?>
                         <div class="empty-state">
-                            <img src="assets/images/empty-food.svg" alt="No Food">
-                            <p>No food items available right now</p>
+                            <img src="assets/images/empty-food.svg" alt="No Restaurants">
+                            <p>No restaurants available for this category right now</p>
                         </div>
                         <?php
                     }

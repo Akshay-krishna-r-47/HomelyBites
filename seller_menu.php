@@ -7,6 +7,17 @@ $seller_id = $_SESSION['user_id'];
 $message = "";
 $message_type = "";
 
+// Fetch current offer
+$current_offer = "";
+$stmt = $conn->prepare("SELECT current_offer FROM users WHERE user_id = ?");
+$stmt->bind_param("i", $seller_id);
+$stmt->execute();
+$res = $stmt->get_result();
+if ($row = $res->fetch_assoc()) {
+    $current_offer = $row['current_offer'] ?? '';
+}
+$stmt->close();
+
 // Helper to handle file upload
 function handleImageUpload($file) {
     if (!isset($file) || $file['error'] != 0) return null;
@@ -56,9 +67,11 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                  $avail_slot1_end = !empty($_POST['avail_slot1_end']) ? $_POST['avail_slot1_end'] : null;
                  $avail_slot2_start = !empty($_POST['avail_slot2_start']) ? $_POST['avail_slot2_start'] : null;
                  $avail_slot2_end = !empty($_POST['avail_slot2_end']) ? $_POST['avail_slot2_end'] : null;
+                 $avail_slot3_start = !empty($_POST['avail_slot3_start']) ? $_POST['avail_slot3_start'] : null;
+                 $avail_slot3_end = !empty($_POST['avail_slot3_end']) ? $_POST['avail_slot3_end'] : null;
                  
-                 $stmt = $conn->prepare("INSERT INTO foods (seller_id, name, price, category, image, status, stock, avail_slot1_start, avail_slot1_end, avail_slot2_start, avail_slot2_end) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-                 $stmt->bind_param("isdsssissss", $seller_id, $name, $price, $category, $image_path, $status, $stock, $avail_slot1_start, $avail_slot1_end, $avail_slot2_start, $avail_slot2_end);
+                 $stmt = $conn->prepare("INSERT INTO foods (seller_id, name, price, category, image, status, stock, avail_slot1_start, avail_slot1_end, avail_slot2_start, avail_slot2_end, avail_slot3_start, avail_slot3_end) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                 $stmt->bind_param("isdsssissssss", $seller_id, $name, $price, $category, $image_path, $status, $stock, $avail_slot1_start, $avail_slot1_end, $avail_slot2_start, $avail_slot2_end, $avail_slot3_start, $avail_slot3_end);
                  
                  if ($stmt->execute()) {
                      $message = "Item added successfully."; $message_type = "success";
@@ -96,15 +109,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 $avail_slot1_end = !empty($_POST['avail_slot1_end']) ? $_POST['avail_slot1_end'] : null;
                 $avail_slot2_start = !empty($_POST['avail_slot2_start']) ? $_POST['avail_slot2_start'] : null;
                 $avail_slot2_end = !empty($_POST['avail_slot2_end']) ? $_POST['avail_slot2_end'] : null;
+                $avail_slot3_start = !empty($_POST['avail_slot3_start']) ? $_POST['avail_slot3_start'] : null;
+                $avail_slot3_end = !empty($_POST['avail_slot3_end']) ? $_POST['avail_slot3_end'] : null;
                 
                 if ($new_image) {
-                    $sql = "UPDATE foods SET name=?, price=?, category=?, status=?, image=?, stock=?, avail_slot1_start=?, avail_slot1_end=?, avail_slot2_start=?, avail_slot2_end=? WHERE id=? AND seller_id=?";
+                    $sql = "UPDATE foods SET name=?, price=?, category=?, status=?, image=?, stock=?, avail_slot1_start=?, avail_slot1_end=?, avail_slot2_start=?, avail_slot2_end=?, avail_slot3_start=?, avail_slot3_end=? WHERE id=? AND seller_id=?";
                     $stmt = $conn->prepare($sql);
-                    $stmt->bind_param("sdsssissssii", $name, $price, $category, $status, $new_image, $stock, $avail_slot1_start, $avail_slot1_end, $avail_slot2_start, $avail_slot2_end, $food_id, $seller_id);
+                    $stmt->bind_param("sdsssissssssii", $name, $price, $category, $status, $new_image, $stock, $avail_slot1_start, $avail_slot1_end, $avail_slot2_start, $avail_slot2_end, $avail_slot3_start, $avail_slot3_end, $food_id, $seller_id);
                 } else {
-                    $sql = "UPDATE foods SET name=?, price=?, category=?, status=?, stock=?, avail_slot1_start=?, avail_slot1_end=?, avail_slot2_start=?, avail_slot2_end=? WHERE id=? AND seller_id=?";
+                    $sql = "UPDATE foods SET name=?, price=?, category=?, status=?, stock=?, avail_slot1_start=?, avail_slot1_end=?, avail_slot2_start=?, avail_slot2_end=?, avail_slot3_start=?, avail_slot3_end=? WHERE id=? AND seller_id=?";
                     $stmt = $conn->prepare($sql);
-                    $stmt->bind_param("sdssissssii", $name, $price, $category, $status, $stock, $avail_slot1_start, $avail_slot1_end, $avail_slot2_start, $avail_slot2_end, $food_id, $seller_id);
+                    $stmt->bind_param("sdssissssssii", $name, $price, $category, $status, $stock, $avail_slot1_start, $avail_slot1_end, $avail_slot2_start, $avail_slot2_end, $avail_slot3_start, $avail_slot3_end, $food_id, $seller_id);
                 }
 
                 if ($stmt->execute()) {
@@ -126,6 +141,31 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                  $message = "Item removed successfully."; $message_type = "success";
             } else {
                  $message = "Error removing item."; $message_type = "error";
+            }
+            $stmt->close();
+        } elseif ($_POST['action'] == 'update_offer') {
+            $offer_text = trim($_POST['offer_text']);
+            $stmt = $conn->prepare("UPDATE users SET current_offer=? WHERE user_id=?");
+            $stmt->bind_param("si", $offer_text, $seller_id);
+            if ($stmt->execute()) {
+                 $message = "Restaurant offer updated successfully."; 
+                 $message_type = "success";
+                 $current_offer = $offer_text;
+            } else {
+                 $message = "Error updating offer."; 
+                 $message_type = "error";
+            }
+            $stmt->close();
+        } elseif ($_POST['action'] == 'remove_offer') {
+            $stmt = $conn->prepare("UPDATE users SET current_offer=NULL WHERE user_id=?");
+            $stmt->bind_param("i", $seller_id);
+            if ($stmt->execute()) {
+                 $message = "Restaurant offer disabled."; 
+                 $message_type = "success";
+                 $current_offer = "";
+            } else {
+                 $message = "Error disabling offer."; 
+                 $message_type = "error";
             }
             $stmt->close();
         }
@@ -151,6 +191,11 @@ $stmt->close();
     <title>Manage Menu - Homely Bites</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <!-- Flatpickr CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" type="text/css" href="https://npmcdn.com/flatpickr/dist/themes/airbnb.css">
+    
     <style>
         :root { --brand-green: #27ae60; --bg-body: #f8f8f8; --card-bg: #FFFFFF; --shadow-card: 0 4px 14px rgba(0,0,0,0.08); }
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
@@ -175,8 +220,14 @@ $stmt->close();
         .time-slots-container { background: #f9f9f9; padding: 15px; border-radius: 8px; border: 1px solid #eee; margin-bottom: 20px; }
         .time-slots-title { font-weight: 600; font-size: 0.9rem; margin-bottom: 10px; color: #333; }
         .time-group { display: flex; gap: 10px; margin-bottom: 10px; align-items: center; }
-        .time-group input[type="time"] { padding: 8px; font-size: 0.9rem; }
+        .time-group input[type="time"], .time-group input[type="text"], .time-group input.flatpickr-input { padding: 8px 12px; font-size: 0.9rem; border: 1px solid #ddd; border-radius: 6px; cursor: pointer; background: white; width: 130px; transition: border-color 0.2s; }
+        .time-group input[type="text"]:focus, .time-group input.flatpickr-input:focus { border-color: var(--brand-green); outline: none; box-shadow: 0 0 0 3px rgba(39, 174, 96, 0.1); }
         .time-group span { font-size: 0.9rem; color: #666; font-weight: 500; }
+        
+        /* Flatpickr Theme Overrides */
+        .flatpickr-calendar { font-family: 'Poppins', sans-serif !important; border-radius: 12px !important; box-shadow: 0 10px 30px rgba(0,0,0,0.1) !important; border: 1px solid rgba(0,0,0,0.05) !important; padding: 5px !important; }
+        .flatpickr-time input:hover, .flatpickr-time .flatpickr-am-pm:hover, .flatpickr-time input:focus, .flatpickr-time .flatpickr-am-pm:focus { background: rgba(39, 174, 96, 0.05) !important; }
+        .flatpickr-time input, .flatpickr-time .flatpickr-am-pm { font-weight: 600 !important; color: #333 !important; }
         
         .food-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 24px; padding-bottom: 40px; }
         
@@ -238,6 +289,23 @@ $stmt->close();
 
         <?php if ($message): ?> <div class="alert alert-<?php echo $message_type; ?>"><?php echo $message; ?></div> <?php endif; ?>
 
+        <!-- Restaurant Offer Section -->
+        <div style="background: white; border-radius: 16px; padding: 25px; margin-bottom: 30px; box-shadow: var(--shadow-card); border: 1px solid rgba(0,0,0,0.03);">
+            <h3 style="margin-bottom: 10px; font-size: 1.4rem; color: #222; display: flex; align-items: center; gap: 10px;">
+                <i class="fa-solid fa-tags" style="color: var(--brand-green);"></i> Active Offer
+            </h3>
+            <p style="font-size: 0.95rem; color: #666; margin-bottom: 20px;">Highlight an offer on your restaurant to attract more customers (e.g., "FREE DELIVERY", "10% OFF UPTO ₹40"). Leave blank to disable.</p>
+            <form method="POST" style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
+                <div style="flex: 1; min-width: 250px; max-width: 500px;">
+                    <input type="text" name="offer_text" value="<?php echo htmlspecialchars($current_offer); ?>" placeholder="Enter offer text..." style="width: 100%; padding: 12px 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='var(--brand-green)'" onblur="this.style.borderColor='#ddd'">
+                </div>
+                <button type="submit" name="action" value="update_offer" class="btn-primary" style="padding: 12px 25px;">Update Offer</button>
+                <?php if (!empty($current_offer)): ?>
+                    <button type="button" class="btn-danger" style="padding: 12px 25px;" onclick="openDisableOfferModal()">Disable Offer</button>
+                <?php endif; ?>
+            </form>
+        </div>
+
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
             <h2>Manage Menu</h2>
             <button class="btn-primary" onclick="openModal('add')"><i class="fa-solid fa-plus"></i> Add New Item</button>
@@ -259,7 +327,7 @@ $stmt->close();
                             <i class="fa-solid fa-box"></i> Stock: <?php echo $food['stock']; ?>
                         </span>
                     </div>
-                    <?php if(!empty($food['avail_slot1_start']) || !empty($food['avail_slot2_start'])): ?>
+                    <?php if(!empty($food['avail_slot1_start']) || !empty($food['avail_slot2_start']) || !empty($food['avail_slot3_start'])): ?>
                         <div style="margin-top: 10px; font-size: 0.8rem; color: #f39c12; background: #fff8e1; padding: 4px 8px; border-radius: 4px; display: inline-block;">
                             <i class="fa-regular fa-clock"></i> Time Restricted
                         </div>
@@ -346,6 +414,13 @@ $stmt->close();
                         <span>to</span>
                         <input type="time" name="avail_slot2_end" id="slot2End">
                     </div>
+
+                    <label style="font-size: 0.85rem; font-weight: 500; color: #555; display: block; margin-bottom: 5px; margin-top: 15px;">Slot 3 (e.g. Afternoon)</label>
+                    <div class="time-group">
+                        <input type="time" name="avail_slot3_start" id="slot3Start">
+                        <span>to</span>
+                        <input type="time" name="avail_slot3_end" id="slot3End">
+                    </div>
                 </div>
 
                 <button type="submit" class="btn-primary" style="width: 100%;">Save Item</button>
@@ -371,6 +446,23 @@ $stmt->close();
         </div>
     </div>
 
+    <!-- DISABLE OFFER MODAL -->
+    <div id="disableOfferModal" class="modal">
+        <div class="modal-content" style="width: 400px;">
+            <div class="delete-confirm-content">
+                <div class="delete-icon" style="background: #fff3e0; color: #e65100;"><i class="fa-solid fa-tags"></i></div>
+                <h3 style="margin-bottom: 10px; color: #111;">Disable Offer?</h3>
+                <p style="color: #666; margin-bottom: 25px; font-size: 14px;">Are you sure you want to remove the current promotional offer? It will no longer be visible to customers.</p>
+                
+                <form method="POST" style="display: flex; gap: 15px; justify-content: center;">
+                    <input type="hidden" name="action" value="remove_offer">
+                    <button type="button" class="btn-cancel" onclick="closeDisableOfferModal()">Keep Offer</button>
+                    <button type="submit" class="btn-danger" style="background: #e65100; border-color: #ef6c00; color: white;">Disable</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <script>
         function toggleSidebar(){ document.querySelector('.sidebar').classList.toggle('collapsed'); }
         
@@ -390,11 +482,17 @@ $stmt->close();
                 document.getElementById('itemCategory').value = "Main Course";
                 document.getElementById('itemStatus').value = "Available";
                 
-                // Clear times
-                document.getElementById('slot1Start').value = "";
-                document.getElementById('slot1End').value = "";
-                document.getElementById('slot2Start').value = "";
-                document.getElementById('slot2End').value = "";
+                // Clear times via flatpickr API if available, else fallback
+                if (typeof timePickers !== 'undefined' && timePickers.length > 0) {
+                    timePickers.forEach(fp => fp.clear());
+                } else {
+                    document.getElementById('slot1Start').value = "";
+                    document.getElementById('slot1End').value = "";
+                    document.getElementById('slot2Start').value = "";
+                    document.getElementById('slot2End').value = "";
+                    document.getElementById('slot3Start').value = "";
+                    document.getElementById('slot3End').value = "";
+                }
             }
         }
         
@@ -410,11 +508,23 @@ $stmt->close();
             document.getElementById('itemCategory').value = food.category;
             document.getElementById('itemStatus').value = food.status;
             
-            // Populate times
-            document.getElementById('slot1Start').value = food.avail_slot1_start ? food.avail_slot1_start.substring(0,5) : "";
-            document.getElementById('slot1End').value = food.avail_slot1_end ? food.avail_slot1_end.substring(0,5) : "";
-            document.getElementById('slot2Start').value = food.avail_slot2_start ? food.avail_slot2_start.substring(0,5) : "";
-            document.getElementById('slot2End').value = food.avail_slot2_end ? food.avail_slot2_end.substring(0,5) : "";
+            // Populate times - Flatpickr automatically hooks to the underlying input.value setting 
+            // but for safety, we'll try setting via its setDate API directly if referencing the DOM element
+            function setFPDate(id, value) {
+                const el = document.getElementById(id);
+                if (el && el._flatpickr) {
+                    el._flatpickr.setDate(value);
+                } else if (el) {
+                    el.value = value;
+                }
+            }
+            
+            setFPDate('slot1Start', food.avail_slot1_start ? food.avail_slot1_start.substring(0,5) : "");
+            setFPDate('slot1End', food.avail_slot1_end ? food.avail_slot1_end.substring(0,5) : "");
+            setFPDate('slot2Start', food.avail_slot2_start ? food.avail_slot2_start.substring(0,5) : "");
+            setFPDate('slot2End', food.avail_slot2_end ? food.avail_slot2_end.substring(0,5) : "");
+            setFPDate('slot3Start', food.avail_slot3_start ? food.avail_slot3_start.substring(0,5) : "");
+            setFPDate('slot3End', food.avail_slot3_end ? food.avail_slot3_end.substring(0,5) : "");
         }
 
         function closeModal() {
@@ -424,6 +534,7 @@ $stmt->close();
         window.onclick = function(e) { 
             if(e.target == modal) closeModal(); 
             if(e.target == deleteModal) closeDeleteModal();
+            if(e.target == document.getElementById('disableOfferModal')) closeDisableOfferModal();
         }
 
         // Delete Modal Logic
@@ -438,6 +549,34 @@ $stmt->close();
         function closeDeleteModal() {
             deleteModal.classList.remove('active');
         }
+
+        // Disable Offer Modal Logic
+        function openDisableOfferModal() {
+            document.getElementById('disableOfferModal').classList.add('active');
+        }
+
+        function closeDisableOfferModal() {
+            document.getElementById('disableOfferModal').classList.remove('active');
+        }
+    </script>
+    
+    <!-- Flatpickr JS -->
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script>
+        let timePickers = [];
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize Flatpickr on all time inputs
+            timePickers = flatpickr("input[type=time]", {
+                enableTime: true,
+                noCalendar: true,
+                dateFormat: "H:i",
+                altInput: true,
+                altFormat: "h:i K",
+                time_24hr: false,
+                minuteIncrement: 5,
+                placeholder: "-- : -- --"
+            });
+        });
     </script>
 </body>
 </html>

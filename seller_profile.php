@@ -12,14 +12,20 @@ $message_type = "";
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $name = trim($_POST['name']);
     $email = trim($_POST['email']);
-    // Note: Password update usually requires old password check, skipping for brevity unless requested.
-    // Also, email update might require verification, but implementing simple update here.
+    $business_name = isset($_POST['business_name']) ? trim($_POST['business_name']) : '';
     
     $stmt = $conn->prepare("UPDATE users SET name = ?, email = ? WHERE user_id = ?");
     $stmt->bind_param("ssi", $name, $email, $seller_id);
     
     if ($stmt->execute()) {
-        log_activity($conn, $seller_id, 'Seller Profile Updated', 'Seller updated their store display name or email.');
+        if (!empty($business_name)) {
+            $stmt2 = $conn->prepare("UPDATE seller_applications SET business_name = ? WHERE user_id = ? AND status = 'Approved'");
+            $stmt2->bind_param("si", $business_name, $seller_id);
+            $stmt2->execute();
+            $stmt2->close();
+        }
+    
+        log_activity($conn, $seller_id, 'Seller Profile Updated', 'Seller updated their profile details.');
         $_SESSION['name'] = $name; // Update session
         $message = "Profile updated successfully.";
         $message_type = "success";
@@ -31,10 +37,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 }
 
 // Fetch Current Data
-$stmt = $conn->prepare("SELECT name, email, created_at FROM users WHERE user_id = ?");
+$stmt = $conn->prepare("SELECT u.name, u.email, u.created_at, sa.business_name FROM users u LEFT JOIN seller_applications sa ON u.user_id = sa.user_id AND sa.status = 'Approved' WHERE u.user_id = ?");
 $stmt->bind_param("i", $seller_id);
 $stmt->execute();
-$stmt->bind_result($name, $email, $joined_at);
+$stmt->bind_result($name, $email, $joined_at, $business_name);
 $stmt->fetch();
 $stmt->close();
 ?>
@@ -128,9 +134,15 @@ $stmt->close();
                 
                 <form method="POST">
                     <div class="form-group">
-                        <label>Display Name / Shop Name</label>
+                        <label>Display Name (Personal Name)</label>
                         <input type="text" name="name" value="<?php echo htmlspecialchars($name); ?>" required>
                     </div>
+                    <?php if (isset($business_name)): ?>
+                    <div class="form-group">
+                        <label>Kitchen / Business Name</label>
+                        <input type="text" name="business_name" value="<?php echo htmlspecialchars($business_name); ?>" required>
+                    </div>
+                    <?php endif; ?>
                     <div class="form-group">
                         <label>Email Address</label>
                         <input type="email" name="email" value="<?php echo htmlspecialchars($email); ?>" required>

@@ -112,6 +112,43 @@ $pending_count = $pending_result->num_rows;
         .btn-reject { background-color: #ffebee; color: #c62828; }
         .btn-action:hover { opacity: 0.8; }
 
+        /* Custom Modal Styles */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);
+            display: flex; align-items: center; justify-content: center;
+            opacity: 0; pointer-events: none; transition: opacity 0.3s ease; z-index: 1000;
+        }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+        
+        .modal-content {
+            background: var(--card-bg); width: 90%; max-width: 420px;
+            border-radius: var(--border-radius); padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            transform: translateY(20px) scale(0.95); transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            text-align: center;
+        }
+        .modal-overlay.active .modal-content { transform: translateY(0) scale(1); }
+        
+        .modal-icon {
+            width: 70px; height: 70px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-size: 2rem; margin: 0 auto 20px;
+        }
+        .modal-icon.approve { background: #e8f5e9; color: #2e7d32; }
+        .modal-icon.reject { background: #ffebee; color: #c62828; }
+        
+        .modal-title { font-size: 1.3rem; font-weight: 700; margin-bottom: 10px; color: var(--text-dark); }
+        .modal-desc { font-size: 0.95rem; color: var(--text-muted); margin-bottom: 25px; line-height: 1.5; }
+        
+        .modal-actions { display: flex; gap: 15px; }
+        .modal-btn { flex: 1; padding: 12px; border-radius: 8px; font-weight: 600; cursor: pointer; border: none; font-size: 1rem; transition: background 0.2s; }
+        .modal-btn-cancel { background: #f1f2f6; color: #2f3542; }
+        .modal-btn-cancel:hover { background: #dfe4ea; }
+        .modal-btn-confirm.approve { background: var(--brand-green); color: white; }
+        .modal-btn-confirm.approve:hover { background: #006600; }
+        .modal-btn-confirm.reject { background: #e74c3c; color: white; }
+        .modal-btn-confirm.reject:hover { background: #c0392b; }
+
     </style>
 </head>
 <body>
@@ -172,8 +209,9 @@ $pending_count = $pending_result->num_rows;
                                         <input type="hidden" name="application_id" value="<?php echo $row['application_id']; ?>">
                                         <input type="hidden" name="applicant_user_id" value="<?php echo $row['user_id']; ?>">
                                         
-                                        <button type="submit" name="action" value="approve" class="btn-action btn-approve" onclick="return confirm('Approve this seller? This will change their role immediately.');">Approve</button>
-                                        <button type="submit" name="action" value="reject" class="btn-action btn-reject" onclick="return confirm('Reject this application?');">Reject</button>
+                                        <input type="hidden" name="action" class="action-input" value="">
+                                        <button type="button" class="btn-action btn-approve" onclick="showConfirmModal('approve', this.closest('form'))">Approve</button>
+                                        <button type="button" class="btn-action btn-reject" onclick="showConfirmModal('reject', this.closest('form'))">Reject</button>
                                     </form>
                                 </td>
                             </tr>
@@ -186,6 +224,74 @@ $pending_count = $pending_result->num_rows;
             </div>
         </div>
     </div>
-    <script>function toggleSidebar(){document.querySelector('.sidebar').classList.toggle('collapsed');}</script>
+
+    <!-- Custom Confirmation Modal -->
+    <div class="modal-overlay" id="confirmModal">
+        <div class="modal-content">
+            <div class="modal-icon" id="modalIcon">
+                <i class="fa-solid fa-question"></i>
+            </div>
+            <h3 class="modal-title" id="modalTitle">Confirm Action</h3>
+            <p class="modal-desc" id="modalDesc">Are you sure you want to proceed?</p>
+            <div class="modal-actions">
+                <button class="modal-btn modal-btn-cancel" onclick="closeModal()">Cancel</button>
+                <button class="modal-btn modal-btn-confirm" id="modalConfirmBtn" onclick="executeAction()">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function toggleSidebar(){document.querySelector('.sidebar').classList.toggle('collapsed');}
+
+        let pendingForm = null;
+        let pendingAction = null;
+
+        function showConfirmModal(actionType, formElement) {
+            pendingForm = formElement;
+            pendingAction = actionType;
+            
+            const modal = document.getElementById('confirmModal');
+            const icon = document.getElementById('modalIcon');
+            const title = document.getElementById('modalTitle');
+            const desc = document.getElementById('modalDesc');
+            const confirmBtn = document.getElementById('modalConfirmBtn');
+            const iconEl = icon.querySelector('i');
+
+            // Reset classes
+            icon.className = 'modal-icon';
+            confirmBtn.className = 'modal-btn modal-btn-confirm';
+
+            if (actionType === 'approve') {
+                icon.classList.add('approve');
+                iconEl.className = 'fa-solid fa-check';
+                title.textContent = 'Approve Seller?';
+                desc.textContent = 'This will immediately change their role to Seller and grant them menu access.';
+                confirmBtn.classList.add('approve');
+                confirmBtn.textContent = 'Yes, Approve';
+            } else if (actionType === 'reject') {
+                icon.classList.add('reject');
+                iconEl.className = 'fa-solid fa-xmark';
+                title.textContent = 'Reject Application?';
+                desc.textContent = 'This will permanently deny this user\'s request to become a seller on the platform.';
+                confirmBtn.classList.add('reject');
+                confirmBtn.textContent = 'Yes, Reject';
+            }
+
+            modal.classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('confirmModal').classList.remove('active');
+            pendingForm = null;
+            pendingAction = null;
+        }
+
+        function executeAction() {
+            if (pendingForm && pendingAction) {
+                pendingForm.querySelector('.action-input').value = pendingAction;
+                pendingForm.submit();
+            }
+        }
+    </script>
 </body>
 </html>
